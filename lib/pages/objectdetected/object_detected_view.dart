@@ -78,12 +78,32 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const SizedBox(
-                  height: 50,
-                  width: 50,
-                  child: CircularProgressIndicator(
-                    color: Colors.cyanAccent,
-                    strokeWidth: 3,
+                // Progress Indicator Stack
+                SizedBox(
+                  height: 60,
+                  width: 60,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // The Ring
+                      CircularProgressIndicator(
+                        value: c.downloadProgress.value, 
+                        color: Colors.cyanAccent,
+                        backgroundColor: Colors.white24,
+                        strokeWidth: 4,
+                      ),
+                      // The Text in the middle
+                      Center(
+                        child: Text(
+                          "${(c.downloadProgress.value * 100).toInt()}%",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -96,8 +116,9 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
                   ),
                 ),
                 const SizedBox(height: 8),
+                // Optional details text
                 Text(
-                  "Please wait while we load the assets",
+                  "Please wait while we load assets",
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.5),
                     fontSize: 12,

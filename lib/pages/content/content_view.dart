@@ -1,9 +1,10 @@
 import 'dart:developer';
-import 'dart:io'; // Import dart:io
-import 'dart:ui';
+import 'dart:io';
+import 'dart:ui'; // For ImageFilter
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
+import 'package:flutter/rendering.dart'; // For ScrollDirection
+import 'package:flutter/services.dart'; // For HapticFeedback
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:just_audio/just_audio.dart';
@@ -19,8 +20,7 @@ class ContentScreen extends StatefulWidget {
   State<ContentScreen> createState() => _ContentScreenState();
 }
 
-class _ContentScreenState extends State<ContentScreen>
-    with TickerProviderStateMixin {
+class _ContentScreenState extends State<ContentScreen> {
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   late final ObjectDetectedController c;
@@ -28,13 +28,11 @@ class _ContentScreenState extends State<ContentScreen>
 
   bool isPlaying = false;
   bool isOpeningVideo = false;
+
+  // Controls are initially shown
   bool showControls = true;
 
   final ScrollController _scrollController = ScrollController();
-
-  late AnimationController _entranceController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
@@ -49,29 +47,7 @@ class _ContentScreenState extends State<ContentScreen>
       return;
     }
 
-    _setupAnimations();
     _autoPlayAudio();
-  }
-
-  void _setupAnimations() {
-    _entranceController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _entranceController, curve: Curves.easeOut),
-    );
-
-    _slideAnimation =
-        Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _entranceController,
-            curve: Curves.easeOutCubic,
-          ),
-        );
-
-    _entranceController.forward();
   }
 
   Future<void> _autoPlayAudio() async {
@@ -98,7 +74,6 @@ class _ContentScreenState extends State<ContentScreen>
   void dispose() {
     _audioPlayer.dispose();
     _scrollController.dispose();
-    _entranceController.dispose();
     super.dispose();
   }
 
@@ -111,6 +86,7 @@ class _ContentScreenState extends State<ContentScreen>
       backgroundColor: const Color(0xFFF8F9FA),
       body: Stack(
         children: [
+          // 1. Hero / 3D Model Section
           Positioned(
             top: 0,
             left: 0,
@@ -118,19 +94,20 @@ class _ContentScreenState extends State<ContentScreen>
             height: heroHeight,
             child: _buildHeroSection(),
           ),
+
+          // 2. Scrollable Content
           Positioned.fill(
             top: heroHeight - 40,
             child: NotificationListener<ScrollNotification>(
               onNotification: (notification) {
                 if (notification is UserScrollNotification) {
+                  // Hide controls when scrolling DOWN (reading)
                   if (notification.direction == ScrollDirection.reverse) {
                     if (showControls) setState(() => showControls = false);
-                  } else if (notification.direction ==
-                      ScrollDirection.forward) {
-                    if (_scrollController.hasClients &&
-                        _scrollController.position.pixels <= 20) {
-                      if (!showControls) setState(() => showControls = true);
-                    }
+                  }
+                  // Show controls when scrolling UP
+                  else if (notification.direction == ScrollDirection.forward) {
+                    if (!showControls) setState(() => showControls = true);
                   }
                 }
                 return false;
@@ -154,35 +131,35 @@ class _ContentScreenState extends State<ContentScreen>
                   child: SingleChildScrollView(
                     controller: _scrollController,
                     physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(24, 60, 24, 100),
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: SlideTransition(
-                        position: _slideAnimation,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildHeader(),
-                            const SizedBox(height: 24),
-                            _buildDescription(),
-                            const SizedBox(height: 32),
-                            _buildFactsSection(),
-                            const SizedBox(height: 40),
-                          ],
-                        ),
-                      ),
+                    // Increased top padding so text is visible under the button initially
+                    padding: const EdgeInsets.fromLTRB(24, 85, 24, 100),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildHeader(),
+                        const SizedBox(height: 24),
+                        _buildDescription(),
+                        const SizedBox(height: 32),
+                        _buildFactsSection(),
+                        const SizedBox(height: 40),
+                      ],
                     ),
                   ),
                 ),
               ),
             ),
           ),
+
+          // 3. Floating Controls (Redesigned Pill Shape)
           Positioned(
-            top: heroHeight - 35,
-            left: 40,
-            right: 40,
-            child: _buildFloatingControls(),
+            top:
+                heroHeight - 40, // Aligned slightly overlapping the header area
+            left: 0,
+            right: 0,
+            child: Center(child: _buildFloatingControls()),
           ),
+
+          // 4. App Bar (Back Button)
           Positioned(top: 0, left: 0, right: 0, child: _buildAppBar()),
         ],
       ),
@@ -205,7 +182,6 @@ class _ContentScreenState extends State<ContentScreen>
     );
   }
 
-  // UPDATED HERO SECTION TO USE LOCAL FILE
   Widget _buildHeroSection() {
     final String? localPath = c.localModelPath.value;
     String? modelSrc;
@@ -373,49 +349,164 @@ class _ContentScreenState extends State<ContentScreen>
     );
   }
 
+  // --- NEW FLOATING CONTROLS DESIGN ---
+
   Widget _buildFloatingControls() {
-    return AnimatedScale(
-      scale: showControls ? 1.0 : 0.8,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOutBack,
+    return AnimatedSlide(
+      offset: showControls ? Offset.zero : const Offset(0, 2.0),
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
       child: AnimatedOpacity(
         opacity: showControls ? 1.0 : 0.0,
         duration: const Duration(milliseconds: 300),
-        child: IgnorePointer(
-          ignoring: !showControls,
-          child: Container(
-            height: 70,
+        child: Container(
+          height: 80,
+          width:
+              MediaQuery.of(context).size.width * 0.85, // Max width constraint
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.95),
+            borderRadius: BorderRadius.circular(40), // Fully rounded pill
+            border: Border.all(
+              color: Colors.white.withOpacity(0.6),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF6C63FF).withOpacity(0.25),
+                blurRadius: 25,
+                spreadRadius: 0,
+                offset: const Offset(0, 10),
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              // Replay Button
+              _controlButton(
+                icon: Icons.replay_rounded,
+                label: "Replay",
+                color: Colors.grey.shade600,
+                bgColor: Colors.grey.shade100,
+                onTap: () async {
+                  HapticFeedback.lightImpact();
+                  await _audioPlayer.seek(Duration.zero);
+                  if (isPlaying) await _audioPlayer.play();
+                },
+              ),
+
+              // Vertical Divider
+              Container(width: 1, height: 24, color: Colors.grey.shade200),
+
+              // Main Play/Pause Button
+              _mainPlayButton(),
+
+              // Vertical Divider
+              Container(width: 1, height: 24, color: Colors.grey.shade200),
+
+              // Video Button
+              _controlButton(
+                icon: Icons.videocam_rounded,
+                label: "Video",
+                color: const Color(0xFFFF6584),
+                bgColor: const Color(0xFFFF6584).withOpacity(0.1),
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _openVideo();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _mainPlayButton() {
+    return StreamBuilder<PlayerState>(
+      stream: _audioPlayer.playerStateStream,
+      builder: (context, snapshot) {
+        final playing = snapshot.data?.playing ?? false;
+
+        return GestureDetector(
+          onTap: () async {
+            HapticFeedback.selectionClick();
+            if (_audioPlayer.playing) {
+              await _audioPlayer.pause();
+            } else {
+              await _audioPlayer.play();
+            }
+            if (mounted) setState(() => isPlaying = _audioPlayer.playing);
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            height: 64,
+            width: 64,
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: playing
+                    ? [const Color(0xFF4834D4), const Color(0xFF6C63FF)]
+                    : [const Color(0xFF6C63FF), const Color(0xFF8C84FF)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF6C63FF).withOpacity(0.25),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
+                  color: const Color(0xFF6C63FF).withOpacity(0.4),
+                  blurRadius: 12,
+                  spreadRadius: playing ? 2 : 4,
+                  offset: const Offset(0, 6),
                 ),
               ],
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _controlButton(
-                  icon: Icons.restart_alt_rounded,
-                  color: Colors.grey,
-                  onTap: () async {
-                    await _audioPlayer.seek(Duration.zero);
-                    if (isPlaying) await _audioPlayer.play();
-                  },
-                ),
-                _mainPlayButton(),
-                _controlButton(
-                  icon: Icons.videocam_rounded,
-                  color: const Color(0xFFFF6584),
-                  onTap: _openVideo,
-                ),
-              ],
+            child: Icon(
+              playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              color: Colors.white,
+              size: 36,
             ),
           ),
+        );
+      },
+    );
+  }
+
+  Widget _controlButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required Color bgColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -445,62 +536,6 @@ class _ContentScreenState extends State<ContentScreen>
     );
 
     setState(() => isOpeningVideo = false);
-  }
-
-  Widget _controlButton({
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return IconButton(
-      onPressed: onTap,
-      icon: Icon(icon, color: color, size: 28),
-      style: IconButton.styleFrom(
-        backgroundColor: color.withOpacity(0.1),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
-  Widget _mainPlayButton() {
-    return GestureDetector(
-      onTap: () async {
-        if (_audioPlayer.playing) {
-          await _audioPlayer.pause();
-        } else {
-          await _audioPlayer.play();
-        }
-        if (mounted) setState(() => isPlaying = _audioPlayer.playing);
-      },
-      child: Container(
-        height: 56,
-        width: 56,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: const LinearGradient(
-            colors: [Color(0xFF6C63FF), Color(0xFF4834D4)],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF6C63FF).withOpacity(0.4),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: StreamBuilder<PlayerState>(
-          stream: _audioPlayer.playerStateStream,
-          builder: (context, snapshot) {
-            final playing = snapshot.data?.playing ?? false;
-            return Icon(
-              playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-              color: Colors.white,
-              size: 32,
-            );
-          },
-        ),
-      ),
-    );
   }
 
   Widget _glassIconButton({

@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'dart:io';
-import 'dart:ui';
+import 'dart:ui'; // For ImageFilter
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // For HapticFeedback
 import 'package:get/get.dart';
 import 'package:odisha_air_map/navigators/routes_management.dart';
 import 'package:odisha_air_map/pages/scannerscreen/scanner_controller.dart';
@@ -18,19 +21,29 @@ class _ScannerScreenState extends State<ScannerScreen>
   final ScannerController c = Get.put(ScannerController());
 
   late AnimationController _animationController;
+  final double _scanWindowScale = 0.70;
 
-  // Zoom variables
+  // Zoom & Camera State
   double _minAvailableZoom = 1.0;
   double _maxAvailableZoom = 1.0;
   double _currentZoom = 1.0;
   double _baseZoom = 1.0;
+  bool _isFlashOn = false;
+
+  // New State for "Multiple Codes" logic
+  bool _isAmbiguous = false;
+  String _instructionText = "ALIGN CODE TO SCAN";
+
+  // Debouncer for auto-resetting error states
+  Timer? _errorResetTimer;
 
   @override
   void initState() {
     super.initState();
+    // Fast laser animation
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
 
     ever(c.cameraController, (_) {
@@ -47,16 +60,96 @@ class _ScannerScreenState extends State<ScannerScreen>
     if (mounted) setState(() {});
   }
 
+  Future<void> _toggleFlash() async {
+    final controller = c.cameraController.value;
+    if (controller == null) return;
+    try {
+      if (_isFlashOn) {
+        await controller.setFlashMode(FlashMode.off);
+      } else {
+        await controller.setFlashMode(FlashMode.torch);
+      }
+      setState(() => _isFlashOn = !_isFlashOn);
+      HapticFeedback.selectionClick();
+    } catch (e) {
+      debugPrint("Flash error: $e");
+    }
+  }
+
+  /// Call this function from your Controller if API returns "Multiple codes found"
+  void triggerMultipleCodesError() {
+    setState(() {
+      _isAmbiguous = true;
+      _instructionText = "MULTIPLE CODES! ZOOM IN ON ONE";
+    });
+    HapticFeedback.heavyImpact();
+
+    // Reset error after 3 seconds
+    _errorResetTimer?.cancel();
+    _errorResetTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _isAmbiguous = false;
+          _instructionText = "ALIGN CODE TO SCAN";
+        });
+      }
+    });
+  }
+
+  Future<void> _handleScan() async {
+    // 1. Prevent scanning if user is too zoomed out (likely seeing full map)
+    if (_currentZoom < 1.2) {
+      setState(() {
+        _isAmbiguous = true;
+        _instructionText = "TOO FAR! ZOOM IN TO FOCUS";
+      });
+      HapticFeedback.heavyImpact();
+
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted && _isAmbiguous) {
+          setState(() {
+            _isAmbiguous = false;
+            _instructionText = "ALIGN CODE TO SCAN";
+          });
+        }
+      });
+      return;
+    }
+
+    // prevent double scans while a scan is in progress
+    if (c.isLoading.value) return;
+
+    // 2. Proceed to scan
+    HapticFeedback.mediumImpact();
+    await c.scanImage();
+
+    // Example: If your controller detects multiple, you would call:
+    // triggerMultipleCodesError();
+  }
+
   @override
   void dispose() {
     _animationController.dispose();
+    _errorResetTimer?.cancel();
+    c.cameraController.value?.setFlashMode(FlashMode.off);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final scanWindowSize = size.width * 0.75;
+    final scanWindowSize = size.width * _scanWindowScale;
+    final cutoutRect = Rect.fromCenter(
+      center: Offset(size.width / 2, size.height / 2 - 40),
+      width: scanWindowSize,
+      height: scanWindowSize,
+    );
+
+    // Color Logic based on state
+    final Color scanColor = _isAmbiguous
+        ? Colors
+              .orangeAccent // Warning Color
+        : Colors.cyanAccent; // Normal Color
 
     return WillPopScope(
       onWillPop: () async {
@@ -68,349 +161,379 @@ class _ScannerScreenState extends State<ScannerScreen>
         body: Stack(
           fit: StackFit.expand,
           children: [
-            // -----------------------------------------------------------
-            // LAYER 1: CAMERA FEED OR SAVED IMAGE
-            // -----------------------------------------------------------
+            // 1. Camera Layer
+            _buildCameraPreview(cutoutRect),
+
+            // 2. Dark Overlay
+            _buildOverlay(size, cutoutRect),
+
+            // 3. Viewfinder (Border + Laser)
+            _buildViewfinder(cutoutRect, scanColor),
+
+            // 4. Status Pill (Top)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 20,
+              left: 0,
+              right: 0,
+              child: Center(child: _buildStatusPill(scanColor)),
+            ),
+
+            // 5. Controls (Bottom)
+            Positioned(
+              bottom: 40,
+              left: 0,
+              right: 0,
+              child: _buildBottomControls(scanColor),
+            ),
+
+            // 6. Loading Overlay
             Obx(() {
-              // --- STATE: ANALYZING (SHOW CAPTURED CROP) ---
-              // Only show this if we actually HAVE an image path
-              if (c.savedImagePath.value != null && c.isLoading.value) {
+              if (c.isLoading.value) {
                 return Container(
-                  color: Colors.black, // Background stays black
-                  child: Center(
-                    child: Container(
-                      width: scanWindowSize,
-                      height: scanWindowSize,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        image: DecorationImage(
-                          image: FileImage(File(c.savedImagePath.value!)),
-                          fit: BoxFit.cover,
-                        ),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.5),
-                          width: 2,
-                        ),
-                      ),
-                    ),
+                  color: Colors.black54,
+                  child: const Center(
+                    child: CircularProgressIndicator(color: Colors.cyanAccent),
                   ),
                 );
               }
-
-              // --- STATE: LIVE CAMERA FEED ---
-              final controller = c.cameraController.value;
-              if (controller == null || !controller.value.isInitialized) {
-                return Container(color: Colors.black);
-              }
-
-              return GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onScaleStart: (details) => _baseZoom = _currentZoom,
-                onScaleUpdate: (details) async {
-                  if (c.isLoading.value) return;
-                  double newZoom = (_baseZoom * details.scale).clamp(
-                    _minAvailableZoom,
-                    _maxAvailableZoom,
-                  );
-                  setState(() => _currentZoom = newZoom);
-                  await controller.setZoomLevel(newZoom);
-                },
-                child: CameraPreview(controller),
-              );
+              return const SizedBox.shrink();
             }),
-
-            // -----------------------------------------------------------
-            // LAYER 2: DARK OVERLAY
-            // -----------------------------------------------------------
-            Obx(() {
-              // FIX: Only hide the overlay if we have an image AND are loading.
-              // If we are loading but image is null (First scan), KEEP OVERLAY.
-              if (c.isLoading.value && c.savedImagePath.value != null) {
-                return const SizedBox.shrink();
-              }
-              return CustomPaint(
-                painter: ModernScannerOverlayPainter(
-                  scanWindowSize: scanWindowSize,
-                ),
-                child: Container(),
-              );
-            }),
-
-            // -----------------------------------------------------------
-            // LAYER 3: LASER ANIMATION
-            // -----------------------------------------------------------
-            Obx(() {
-              // FIX: Keep laser running during first scan processing
-              if (c.isLoading.value && c.savedImagePath.value != null) {
-                return const SizedBox.shrink();
-              }
-              return Center(
-                child: AnimatedBuilder(
-                  animation: _animationController,
-                  builder: (context, child) {
-                    return CustomPaint(
-                      size: Size(scanWindowSize, scanWindowSize),
-                      painter: LaserScannerPainter(
-                        animationValue: _animationController.value,
-                        color: Colors.cyanAccent,
-                      ),
-                    );
-                  },
-                ),
-              );
-            }),
-
-            // -----------------------------------------------------------
-            // LAYER 4: UI CONTROLS
-            // -----------------------------------------------------------
-            SafeArea(
-              child: Column(
-                children: [
-                  // --- HEADER ---
-                  Padding(
-                    padding: const EdgeInsets.only(top: 20),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(30),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 10,
-                          ),
-                          color: Colors.black.withOpacity(0.3),
-                          child: Obx(
-                            () => Text(
-                              c.isLoading.value
-                                  ? "Processing Image..."
-                                  : "Point at an object to scan",
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const Spacer(),
-
-                  // --- ZOOM SLIDER ---
-                  Obx(() {
-                    if (c.isLoading.value) return const SizedBox(height: 40);
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.zoom_out,
-                            color: Colors.white70,
-                            size: 20,
-                          ),
-                          Expanded(
-                            child: SliderTheme(
-                              data: SliderTheme.of(context).copyWith(
-                                activeTrackColor: Colors.cyanAccent,
-                                inactiveTrackColor: Colors.white24,
-                                thumbColor: Colors.white,
-                                thumbShape: const RoundSliderThumbShape(
-                                  enabledThumbRadius: 8.0,
-                                ),
-                              ),
-                              child: Slider(
-                                value: _currentZoom,
-                                min: _minAvailableZoom,
-                                max: _maxAvailableZoom,
-                                onChanged: (value) async {
-                                  setState(() => _currentZoom = value);
-                                  await c.cameraController.value?.setZoomLevel(
-                                    value,
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                          const Icon(
-                            Icons.zoom_in,
-                            color: Colors.white70,
-                            size: 20,
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-
-                  const SizedBox(height: 20),
-
-                  // --- BOTTOM BUTTON / LOADER ---
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 40),
-                    child: Obx(() {
-                      if (c.isLoading.value) {
-                        return Column(
-                          children: [
-                            const SizedBox(
-                              height: 40,
-                              width: 40,
-                              child: CircularProgressIndicator(
-                                color: Colors.cyanAccent,
-                                strokeWidth: 3,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              "Analyzing...",
-                              style: TextStyle(
-                                color: Colors.cyanAccent.withOpacity(0.9),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        );
-                      }
-
-                      return GestureDetector(
-                        onTap: () => c.scanImage(),
-                        child: Container(
-                          height: 80,
-                          width: 80,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 4),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.cyanAccent.withOpacity(0.3),
-                                blurRadius: 20,
-                                spreadRadius: 5,
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.camera_alt_rounded,
-                            size: 32,
-                            color: Colors.black,
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ),
     );
   }
-}
 
-// ---------------------------------------------------------------------------
-// PAINTERS (Same as before)
-// ---------------------------------------------------------------------------
+  Widget _buildCameraPreview(Rect rect) {
+    return Obx(() {
+      final controller = c.cameraController.value;
+      if (controller == null || !controller.value.isInitialized) {
+        return Container(color: Colors.black);
+      }
 
-class ModernScannerOverlayPainter extends CustomPainter {
-  final double scanWindowSize;
-  ModernScannerOverlayPainter({required this.scanWindowSize});
+      if (c.savedImagePath.value != null && c.isLoading.value) {
+        return Positioned.fromRect(
+          rect: rect,
+          child: Image.file(File(c.savedImagePath.value!), fit: BoxFit.cover),
+        );
+      }
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = scanWindowSize / 2;
-
-    // Dark Background (90% Opacity)
-    final backgroundPath = Path()
-      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
-    final cutoutPath = Path()
-      ..addOval(Rect.fromCircle(center: center, radius: radius));
-
-    canvas.drawPath(
-      Path.combine(PathOperation.difference, backgroundPath, cutoutPath),
-      Paint()..color = Colors.black.withOpacity(0.9),
-    );
-
-    // White Ring
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()
-        ..color = Colors.white.withOpacity(0.5)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
-    );
-
-    // Corner Brackets
-    final cornerPaint = Paint()
-      ..color = Colors.cyanAccent
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
-      ..strokeCap = StrokeCap.round;
-    final double bracketLength = 30;
-    final double offset = radius + 15;
-
-    // Draw corners (simplified for brevity)
-    final corners = [
-      [
-        Offset(center.dx - offset, center.dy - offset + bracketLength),
-        Offset(center.dx - offset, center.dy - offset),
-        Offset(center.dx - offset + bracketLength, center.dy - offset),
-      ],
-      [
-        Offset(center.dx + offset - bracketLength, center.dy - offset),
-        Offset(center.dx + offset, center.dy - offset),
-        Offset(center.dx + offset, center.dy - offset + bracketLength),
-      ],
-      [
-        Offset(center.dx + offset, center.dy + offset - bracketLength),
-        Offset(center.dx + offset, center.dy + offset),
-        Offset(center.dx + offset - bracketLength, center.dy + offset),
-      ],
-      [
-        Offset(center.dx - offset + bracketLength, center.dy + offset),
-        Offset(center.dx - offset, center.dy + offset),
-        Offset(center.dx - offset, center.dy + offset - bracketLength),
-      ],
-    ];
-
-    for (var points in corners) {
-      canvas.drawPath(
-        Path()
-          ..moveTo(points[0].dx, points[0].dy)
-          ..lineTo(points[1].dx, points[1].dy)
-          ..lineTo(points[2].dx, points[2].dy),
-        cornerPaint,
+      return GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onScaleStart: (details) => _baseZoom = _currentZoom,
+        onScaleUpdate: (details) async {
+          if (c.isLoading.value) return;
+          double newZoom = (_baseZoom * details.scale).clamp(
+            _minAvailableZoom,
+            _maxAvailableZoom,
+          );
+          setState(() => _currentZoom = newZoom);
+          await controller.setZoomLevel(newZoom);
+        },
+        child: SizedBox.expand(child: CameraPreview(controller)),
       );
-    }
+    });
   }
 
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  Widget _buildOverlay(Size size, Rect cutoutRect) {
+    return ColorFiltered(
+      colorFilter: const ColorFilter.mode(Colors.black54, BlendMode.srcOut),
+      child: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              color: Colors.transparent,
+              backgroundBlendMode: BlendMode.dstOut,
+            ),
+          ),
+          Positioned.fromRect(
+            rect: cutoutRect,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildViewfinder(Rect rect, Color color) {
+    return Positioned.fromRect(
+      rect: rect,
+      child: Stack(
+        children: [
+          // Corner Borders
+          CustomPaint(
+            painter: CornerBorderPainter(color: color),
+            child: Container(),
+          ),
+          // Laser Line (Hidden if ambiguous/error)
+          if (!_isAmbiguous)
+            Obx(() {
+              if (c.isLoading.value) return const SizedBox.shrink();
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: AnimatedBuilder(
+                  animation: _animationController,
+                  builder: (context, child) {
+                    return CustomPaint(
+                      painter: LaserLinePainter(
+                        value: _animationController.value,
+                        color: color,
+                      ),
+                      child: Container(),
+                    );
+                  },
+                ),
+              );
+            }),
+          // Warning Icon in center if ambiguous
+          if (_isAmbiguous)
+            Center(
+              child: Icon(
+                Icons.warning_amber_rounded,
+                color: color.withOpacity(0.5),
+                size: 80,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusPill(Color color) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(30),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          decoration: BoxDecoration(
+            color: _isAmbiguous
+                ? Colors.red.withOpacity(0.2) // Red tint for error
+                : Colors.black.withOpacity(0.4),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Obx(
+                () => Icon(
+                  c.isLoading.value
+                      ? Icons.hourglass_top_rounded
+                      : (_isAmbiguous
+                            ? Icons.zoom_in
+                            : Icons.qr_code_scanner_rounded),
+                  color: color,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Obx(
+                () => Text(
+                  c.isLoading.value ? "ANALYZING..." : _instructionText,
+                  style: TextStyle(
+                    color: color, // Text changes color too
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomControls(Color color) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Zoom Slider & Flash
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: _toggleFlash,
+                icon: Icon(
+                  _isFlashOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                  color: _isFlashOn ? Colors.amber : Colors.white70,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: color.withOpacity(0.8),
+                    inactiveTrackColor: Colors.white24,
+                    thumbColor: color,
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 6,
+                    ),
+                    trackHeight: 2,
+                    overlayShape: SliderComponentShape.noOverlay,
+                  ),
+                  child: Slider(
+                    value: _currentZoom,
+                    min: _minAvailableZoom,
+                    max: _maxAvailableZoom,
+                    onChanged: (value) async {
+                      setState(() {
+                        _currentZoom = value;
+                        // Clear error if user zooms in
+                        if (value > 1.2) {
+                          _isAmbiguous = false;
+                          _instructionText = "ALIGN CODE TO SCAN";
+                        }
+                      });
+                      await c.cameraController.value?.setZoomLevel(value);
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                "${_currentZoom.toStringAsFixed(1)}x",
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 30),
+
+        // Capture Button
+        GestureDetector(
+          onTap: _handleScan,
+          child: Container(
+            height: 80,
+            width: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: color.withOpacity(0.5), width: 1),
+            ),
+            child: Center(
+              child: Container(
+                height: 68,
+                width: 68,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Container(
+                    height: 56,
+                    width: 56,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt_rounded,
+                      color: Colors.black,
+                      size: 28,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
-class LaserScannerPainter extends CustomPainter {
-  final double animationValue;
+// ------------------------------------------------------------------
+// PAINTERS
+// ------------------------------------------------------------------
+
+class CornerBorderPainter extends CustomPainter {
   final Color color;
-  LaserScannerPainter({required this.animationValue, required this.color});
+  CornerBorderPainter({required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final double yPos = size.height * animationValue;
-    canvas.drawRect(
-      Rect.fromLTWH(10, yPos, size.width - 20, 3),
-      Paint()
-        ..shader = LinearGradient(
-          colors: [
-            color.withOpacity(0),
-            color.withOpacity(0.8),
-            color.withOpacity(0),
-          ],
-        ).createShader(Rect.fromLTWH(0, yPos, size.width, 4)),
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round;
+
+    final double cornerLen = 30;
+
+    // Top Left
+    canvas.drawPath(
+      Path()
+        ..moveTo(0, cornerLen)
+        ..lineTo(0, 0)
+        ..lineTo(cornerLen, 0),
+      paint,
+    );
+    // Top Right
+    canvas.drawPath(
+      Path()
+        ..moveTo(size.width - cornerLen, 0)
+        ..lineTo(size.width, 0)
+        ..lineTo(size.width, cornerLen),
+      paint,
+    );
+    // Bottom Right
+    canvas.drawPath(
+      Path()
+        ..moveTo(size.width, size.height - cornerLen)
+        ..lineTo(size.width, size.height)
+        ..lineTo(size.width - cornerLen, size.height),
+      paint,
+    );
+    // Bottom Left
+    canvas.drawPath(
+      Path()
+        ..moveTo(cornerLen, size.height)
+        ..lineTo(0, size.height)
+        ..lineTo(0, size.height - cornerLen),
+      paint,
     );
   }
 
   @override
-  bool shouldRepaint(covariant LaserScannerPainter oldDelegate) =>
-      oldDelegate.animationValue != animationValue;
+  bool shouldRepaint(covariant CornerBorderPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+class LaserLinePainter extends CustomPainter {
+  final double value;
+  final Color color;
+
+  LaserLinePainter({required this.value, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final y = size.height * value;
+    final paint = Paint()
+      ..color = color.withOpacity(0.8)
+      ..strokeWidth = 2
+      ..shader = LinearGradient(
+        colors: [color.withOpacity(0.0), color, color.withOpacity(0.0)],
+      ).createShader(Rect.fromLTWH(0, y, size.width, 2));
+
+    canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+
+    final glowPaint = Paint()
+      ..color = color.withOpacity(0.3)
+      ..strokeWidth = 10
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+
+    canvas.drawLine(Offset(0, y), Offset(size.width, y), glowPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant LaserLinePainter oldDelegate) => true;
 }

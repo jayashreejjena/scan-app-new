@@ -1,4 +1,5 @@
 import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:odisha_air_map/navigators/navigators.dart';
 import 'package:odisha_air_map/utils/onboarding_pref.dart';
@@ -39,14 +40,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: "Explore",
       subtitle: "Odisha's Heritage",
       description:
-          "Scan and discover the timeless architecture of Konark and Jagannath Temple through an interactive map.",
+          "Scan famous places district-wise and explore iconic temples, monuments, and historic landmarks across Odisha",
     ),
     OnboardingItem(
       imagePath: 'assets/images/onboarding2.jpg',
       title: "Listen",
       subtitle: "To The Legends",
       description:
-          "Immerse yourself in audio-guided tours that bring ancient stories and hidden secrets to life.",
+          "View famous places in an interactive 3D format and explore every detail like never before.",
     ),
     OnboardingItem(
       imagePath: 'assets/images/onboarding3.jpg',

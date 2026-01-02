@@ -49,6 +49,9 @@ class ObjectDetectedController extends GetxController {
   final errorMessage = RxnString();
   final locationDetails = Rxn<LocationDetails>();
   final localModelPath = RxnString();
+  
+  // 1. ADDED: Variable to track download progress (0.0 to 1.0)
+  final downloadProgress = 0.0.obs;
 
   late int locationId;
 
@@ -91,39 +94,61 @@ class ObjectDetectedController extends GetxController {
         if (modelUrl != null) {
           await _downloadAndCacheModel(modelUrl);
         }
-        // --- KEY FIX END ---
       } else {
         errorMessage.value = "Failed to load location";
-        isLoading.value = false; // Stop loading on error
+        isLoading.value = false;
       }
     } catch (e, stack) {
       errorMessage.value = "Error: $e";
       log("❌ Exception: $e");
       log("$stack");
-      isLoading.value = false; // Stop loading on error
+      isLoading.value = false;
     }
   }
 
+  // 2. UPDATED: Modified to support progress tracking using HttpClient
   Future<void> _downloadAndCacheModel(String onlineUrl) async {
     try {
-      // 1. Get directories and file path
       final directory = await getApplicationDocumentsDirectory();
       final fileName = onlineUrl.split('/').last;
       final file = File('${directory.path}/$fileName');
 
+      // Check cache first
       if (await file.exists()) {
         log("📂 Found cached model at: ${file.path}");
         localModelPath.value = file.path;
-        return; // Exit early, no download needed
+        return; 
       }
 
       isModelDownloading.value = true;
+      downloadProgress.value = 0.0; // Reset progress
       log("⬇️ Downloading model from: $onlineUrl");
 
-      final response = await http.get(Uri.parse(onlineUrl));
+      // --- START NATIVE DOWNLOAD LOGIC ---
+      final httpClient = HttpClient();
+      final request = await httpClient.getUrl(Uri.parse(onlineUrl));
+      final response = await request.close();
 
       if (response.statusCode == 200) {
-        await file.writeAsBytes(response.bodyBytes);
+        final totalBytes = response.contentLength;
+        int receivedBytes = 0;
+
+        final IOSink sink = file.openWrite();
+
+        // Stream the response to track progress
+        await response.listen((List<int> chunk) {
+          receivedBytes += chunk.length;
+          sink.add(chunk);
+
+          if (totalBytes != -1) {
+            // Update the observable variable
+            downloadProgress.value = receivedBytes / totalBytes;
+          }
+        }).asFuture();
+
+        await sink.flush();
+        await sink.close();
+
         log("💾 Model saved to: ${file.path}");
         localModelPath.value = file.path;
       } else {
