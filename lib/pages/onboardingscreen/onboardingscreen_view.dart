@@ -49,6 +49,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       description:
           "View famous places in an interactive 3D format and explore every detail like never before.",
     ),
+    
     OnboardingItem(
       imagePath: 'assets/images/onboarding3.jpg',
       title: "Experience",
