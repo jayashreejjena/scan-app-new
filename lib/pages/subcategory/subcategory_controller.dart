@@ -1,4 +1,3 @@
-// lib/pages/subcategory/subcategory_controller.dart
 import 'dart:convert';
 import 'dart:developer';
 
@@ -10,15 +9,16 @@ class SubcategoryController extends GetxController {
   final isLoading = true.obs;
   final errorMessage = RxnString();
   final items = <ExploreItem>[].obs;
-
   late int districtId;
   late int categoryId;
-  late String categoryName; 
+  late String categoryName;
 
   @override
   void onInit() {
     super.onInit();
+
     final args = Get.arguments as Map<String, dynamic>?;
+
     if (args == null ||
         !args.containsKey('districtId') ||
         !args.containsKey('categoryId')) {
@@ -43,57 +43,66 @@ class SubcategoryController extends GetxController {
           'http://omap.okcl.org/api/districts/$districtId/categories/$categoryId/objects/';
 
       // 🔹 LOG REQUEST
-      log("📡 API Request URL:");
+      log('📡 API REQUEST URL');
       log(url);
 
-      final response = await http.get(Uri.parse(url));
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          'User-Agent': 'PostmanRuntime/7.32.0',
+        },
+      );
 
       // 🔹 LOG STATUS CODE
-      log("📥 API Response Status Code:");
-      log(response.statusCode.toString());
+      log('📥 STATUS CODE: ${response.statusCode}');
 
-      // 🔹 LOG RAW RESPONSE BODY
-      log("📦 API Raw Response Body:");
+      // 🔹 LOG RAW RESPONSE
+      log('📦 RAW RESPONSE BODY:');
       log(response.body);
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
+        final decoded = jsonDecode(response.body);
 
-        // 🔹 LOG PARSED JSON
-        log("✅ Parsed JSON Data:");
-        print(data);
+        if (decoded is! List) {
+          errorMessage.value = 'Invalid response format';
+          log('❌ Response is not a List');
+          return;
+        }
 
-        items.value = data.map((json) {
+        // 🔹 LOG PARSED DATA COUNT
+        log('✅ TOTAL ITEMS RECEIVED: ${decoded.length}');
+
+        items.value = decoded.map<ExploreItem>((json) {
           return ExploreItem(
             id: json['id']?.toString() ?? '',
-            name: json['name'] as String? ?? 'Unnamed Place',
-            imageUrl: json['image'] as String? ?? '',
+            name: json['name']?.toString() ?? 'Unnamed Place',
+            imageUrl: json['image']?.toString() ?? '',
           );
         }).toList();
 
-        // 🔹 LOG FINAL ITEMS LIST
-        log("🎯 Mapped ExploreItem List:");
+        // 🔹 LOG FINAL MAPPED LIST
+        log('🎯 FINAL ITEMS LIST');
         for (var item in items) {
-          log("• ${item.id} | ${item.name} | ${item.imageUrl}");
+          log('• ID: ${item.id} | NAME: ${item.name}');
         }
       } else {
-        errorMessage.value = 'Failed to load data: ${response.statusCode}';
-
-        // 🔴 LOG ERROR RESPONSE
-        log("❌ API Error Response:");
+        errorMessage.value = 'Failed to load data (${response.statusCode})';
+        log('❌ ERROR RESPONSE');
         log(response.body);
       }
     } catch (e, stack) {
       errorMessage.value = 'Error: $e';
 
-      // 🔴 LOG EXCEPTION
-      log("💥 Exception occurred:");
+      log('💥 EXCEPTION OCCURRED');
       log(e.toString());
-      log("📌 Stack Trace:");
+      log('📌 STACK TRACE');
       log(stack.toString());
     } finally {
       isLoading.value = false;
-      log("⏹ API Call Finished");
+      log('⏹ API CALL FINISHED');
     }
   }
 }

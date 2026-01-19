@@ -9,6 +9,8 @@ import 'package:odisha_air_map/pages/objectdetected/object_detected_binding.dart
 import 'package:odisha_air_map/pages/objectdetected/object_detected_view.dart';
 import 'package:odisha_air_map/pages/onboardingscreen/onboardingscreen_binding.dart';
 import 'package:odisha_air_map/pages/onboardingscreen/onboardingscreen_view.dart';
+import 'package:odisha_air_map/pages/scaninfoscreen/scaninfoscreen_binding.dart';
+import 'package:odisha_air_map/pages/scaninfoscreen/scaninfoscreen_view.dart';
 import 'package:odisha_air_map/pages/scannerscreen/scanner_binding.dart';
 import 'package:odisha_air_map/pages/scannerscreen/scanner_view.dart';
 import 'package:odisha_air_map/pages/splash/splash_binding.dart';
@@ -49,7 +51,7 @@ class AppPages {
     GetPage(
       name: _Paths.explorecategory,
       transitionDuration: transistionDuration,
-      page: () => ExploreCategoriesSheet(),
+      page: () => ExploreCategoriesScreen(),
       binding: ExplorecategoryBinding(),
       transition: Transition.rightToLeft,
     ),
@@ -81,6 +83,13 @@ class AppPages {
       transitionDuration: transistionDuration,
       page: () => ContentScreen(),
       binding: ContentBinding(),
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: _Paths.scaninfo,
+      transitionDuration: transistionDuration,
+      page: () => ScannerInfoScreen(),
+      binding: ScaninfoscreenBinding(),
       transition: Transition.rightToLeft,
     ),
   ];

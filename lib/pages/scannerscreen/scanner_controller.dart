@@ -1,8 +1,273 @@
+// import 'dart:async';
+// import 'dart:convert';
+// import 'dart:developer';
+// import 'dart:io';
+// import 'package:camera/camera.dart';
+// import 'package:connectivity_plus/connectivity_plus.dart';
+// import 'package:flutter/foundation.dart';
+// import 'package:flutter/material.dart';
+// import 'package:get/get.dart';
+// import 'package:http/http.dart' as http;
+// import 'package:image/image.dart' as img;
+// import 'package:odisha_air_map/navigators/routes_management.dart';
+// import 'package:path/path.dart' as p;
+// import 'package:path_provider/path_provider.dart';
+
+// class ScannerController extends GetxController {
+//   final cameraController = Rxn<CameraController>();
+
+//   final isLoading = false.obs;
+//   final isInternetConnected = true.obs;
+//   final savedImagePath = RxnString();
+
+//   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+
+//   @override
+//   void onInit() {
+//     super.onInit();
+//     savedImagePath.value = null;
+
+//     _initConnectivity();
+//     initializeCamera();
+//   }
+
+//   // ===================== CONNECTIVITY =====================
+//   void _initConnectivity() {
+//     _connectivitySubscription = Connectivity().onConnectivityChanged.listen(
+//       _updateConnectionStatus,
+//     );
+//     Connectivity().checkConnectivity().then(_updateConnectionStatus);
+//   }
+
+//   void _updateConnectionStatus(List<ConnectivityResult> results) {
+//     final connected = !results.contains(ConnectivityResult.none);
+//     isInternetConnected.value = connected;
+//     if (!connected) {
+//       Get.snackbar(
+//         "No Internet",
+//         "Please connect to the internet to scan.",
+//         backgroundColor: Colors.red,
+//         colorText: Colors.white,
+//       );
+//     }
+//   }
+
+//   // ===================== CAMERA INITIALIZATION =====================
+//   Future<void> initializeCamera() async {
+//     try {
+//       final cameras = await availableCameras();
+
+//       final backCamera = cameras.firstWhere(
+//         (c) => c.lensDirection == CameraLensDirection.back,
+//         orElse: () => cameras.first,
+//       );
+
+//       final controller = CameraController(
+//         backCamera,
+//         ResolutionPreset.high,
+//         enableAudio: false,
+//       );
+
+//       await controller.initialize();
+//       cameraController.value = controller;
+
+//       // --- AUTO-ZOOM LOGIC ---
+//       // We force a zoom because your markers are small.
+//       // This acts like "Portrait Mode" for markers.
+//       final maxZoom = await controller.getMaxZoomLevel();
+//       double initialZoom = 2.0; // 2.0x is a good sweet spot for markers
+
+//       // Safety check to ensure we don't exceed hardware limits
+//       if (initialZoom > maxZoom) initialZoom = maxZoom;
+
+//       await controller.setZoomLevel(initialZoom);
+//       // -----------------------
+
+//       log("✅ Camera initialized with Zoom: $initialZoom");
+//     } catch (e) {
+//       log("❌ Camera init error: $e");
+//     }
+//   }
+
+//   // ===================== SCAN BUTTON ACTION =====================
+//   Future<void> scanImage() async {
+//     if (!isInternetConnected.value) {
+//       Get.snackbar(
+//         "No Internet",
+//         "Connect to the internet",
+//         backgroundColor: Colors.red,
+//         colorText: Colors.white,
+//       );
+//       return;
+//     }
+
+//     final controller = cameraController.value;
+//     if (controller == null || !controller.value.isInitialized) return;
+//     if (isLoading.value) return;
+
+//     try {
+//       isLoading.value = true;
+//       savedImagePath.value = null;
+
+//       // 1. Take Picture
+//       final XFile file = await controller.takePicture();
+
+//       // 2. Pause Preview (Freeze UI)
+//       await controller.pausePreview();
+
+//       // 3. Process in Background (Crop center square)
+//       final Uint8List rawBytes = await file.readAsBytes();
+//       final Uint8List processedBytes = await compute(
+//         processImageInIsolate,
+//         rawBytes,
+//       );
+
+//       // 4. Save to Disk
+//       final File savedImage = await saveToDisk(processedBytes);
+//       savedImagePath.value = savedImage.path;
+//       log("💾 Processed Image saved at: ${savedImage.path}");
+
+//       // 5. Upload API
+//       final result = await uploadForDetection(processedBytes);
+
+//       // 6. Resume Preview
+//       if (cameraController.value != null && controller.value.isInitialized) {
+//         await controller.resumePreview();
+//       }
+
+//       // 7. Handle Result
+//       if (result != null) {
+//         log("🎉 Detection SUCCESS");
+//         RouteManagement.goToExploreCategory(
+//           arguments: {...result, "imagePath": savedImage.path},
+//         );
+//       } else {
+//         Get.snackbar(
+//           "No Match",
+//           "Could not identify the marker. Try getting closer.",
+//           backgroundColor: Colors.red,
+//           colorText: Colors.white,
+//           snackPosition: SnackPosition.TOP,
+//           margin: const EdgeInsets.all(10),
+//         );
+//       }
+//     } catch (e) {
+//       log("❌ Scan error: $e");
+//       Get.snackbar(
+//         "Error",
+//         "Failed to scan image",
+//         backgroundColor: Colors.red,
+//         colorText: Colors.white,
+//         snackPosition: SnackPosition.TOP,
+//         margin: const EdgeInsets.all(10),
+//       );
+//       savedImagePath.value = null;
+//       if (cameraController.value != null && controller.value.isInitialized) {
+//         await controller.resumePreview();
+//       }
+//     } finally {
+//       isLoading.value = false;
+//     }
+//   }
+
+//   // ===================== IMAGE PROCESSING ISOLATE =====================
+//   // This runs on a separate thread to prevent UI stutter
+//   static Uint8List processImageInIsolate(Uint8List inputBytes) {
+//     img.Image? original = img.decodeImage(inputBytes);
+//     if (original == null) return inputBytes;
+
+//     // Crop a square from the center
+//     final int size = original.width < original.height
+//         ? original.width
+//         : original.height;
+
+//     img.Image cropped = img.copyCrop(
+//       original,
+//       x: (original.width - size) ~/ 2,
+//       y: (original.height - size) ~/ 2,
+//       width: size,
+//       height: size,
+//     );
+
+//     // Resize to 800x800 for faster upload/processing
+//     img.Image resized = img.copyResize(cropped, width: 800, height: 800);
+
+//     return Uint8List.fromList(img.encodeJpg(resized, quality: 85));
+//   }
+
+//   // ===================== SAVE UTILS =====================
+//   Future<File> saveToDisk(Uint8List imageBytes) async {
+//     final Directory appDir = await getApplicationDocumentsDirectory();
+//     final Directory scanDir = Directory(p.join(appDir.path, 'scanned_images'));
+
+//     if (!await scanDir.exists()) {
+//       await scanDir.create(recursive: true);
+//     }
+
+//     // Cleanup old images (simple logic)
+//     try {
+//       if (scanDir.listSync().length > 10) {
+//         scanDir.deleteSync(recursive: true);
+//         await scanDir.create();
+//       }
+//     } catch (_) {}
+
+//     final String fileName = 'scan_${DateTime.now().millisecondsSinceEpoch}.jpg';
+//     final File imageFile = File(p.join(scanDir.path, fileName));
+//     await imageFile.writeAsBytes(imageBytes);
+//     return imageFile;
+//   }
+
+//   // ===================== API UPLOAD =====================
+//   Future<Map<String, dynamic>?> uploadForDetection(Uint8List imageBytes) async {
+//     try {
+//       log("📤 Sending image to API...");
+//       final request = http.MultipartRequest(
+//         'POST',
+//         Uri.parse('http://omap.okcl.org/api/patterns/detect/'),
+//       );
+
+//       request.files.add(
+//         http.MultipartFile.fromBytes('image', imageBytes, filename: 'scan.jpg'),
+//       );
+
+//       final response = await request.send().timeout(
+//         const Duration(seconds: 15),
+//       );
+
+//       final body = await response.stream.bytesToString();
+//       log("🌐 API Status: ${response.statusCode}");
+//       log("🌐 API Body: $body");
+
+//       if (response.statusCode == 200) {
+//         final decoded = json.decode(body);
+//         // Add specific check if your API returns {success: false} even on 200 OK
+//         return decoded;
+//       }
+//       return null;
+//     } catch (e) {
+//       log("❌ API error: $e");
+//       return null;
+//     }
+//   }
+
+//   void resetScanner() {
+//     savedImagePath.value = null;
+//     isLoading.value = false;
+//   }
+
+//   @override
+//   void onClose() {
+//     _connectivitySubscription?.cancel();
+//     cameraController.value?.dispose();
+//     super.onClose();
+//   }
+// }
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
-
 import 'package:camera/camera.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -19,7 +284,7 @@ class ScannerController extends GetxController {
 
   final isLoading = false.obs;
   final isInternetConnected = true.obs;
-  final savedImagePath = RxnString(); // Stores the path of the cropped image
+  final savedImagePath = RxnString();
 
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
@@ -27,7 +292,6 @@ class ScannerController extends GetxController {
   void onInit() {
     super.onInit();
     savedImagePath.value = null;
-
     _initConnectivity();
     initializeCamera();
   }
@@ -57,7 +321,6 @@ class ScannerController extends GetxController {
   Future<void> initializeCamera() async {
     try {
       final cameras = await availableCameras();
-
       final backCamera = cameras.firstWhere(
         (c) => c.lensDirection == CameraLensDirection.back,
         orElse: () => cameras.first,
@@ -72,35 +335,33 @@ class ScannerController extends GetxController {
       await controller.initialize();
       cameraController.value = controller;
 
-      // --- AUTO-ZOOM LOGIC ---
-      // We force a zoom because your markers are small.
-      // This acts like "Portrait Mode" for markers.
+      // Auto-Zoom Logic
       final maxZoom = await controller.getMaxZoomLevel();
-      double initialZoom = 2.0; // 2.0x is a good sweet spot for markers
-
-      // Safety check to ensure we don't exceed hardware limits
+      double initialZoom = 2.0;
       if (initialZoom > maxZoom) initialZoom = maxZoom;
-
       await controller.setZoomLevel(initialZoom);
-      // -----------------------
-
-      log("✅ Camera initialized with Zoom: $initialZoom");
     } catch (e) {
       log("❌ Camera init error: $e");
     }
   }
 
+  // ===================== CANCEL LOGIC =====================
+  // Call this when the user taps the "X" button during analysis
+  void cancelScan() async {
+    isLoading.value = false; // 1. Stop the loading spinner
+    savedImagePath.value = null; // 2. Remove the captured image
+
+    // 3. Resume the camera preview immediately
+    final controller = cameraController.value;
+    if (controller != null && controller.value.isInitialized) {
+      await controller.resumePreview();
+    }
+    log("🚫 Scan Cancelled by User");
+  }
+
   // ===================== SCAN BUTTON ACTION =====================
   Future<void> scanImage() async {
-    if (!isInternetConnected.value) {
-      Get.snackbar(
-        "No Internet",
-        "Connect to the internet",
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return;
-    }
+    if (!isInternetConnected.value) return;
 
     final controller = cameraController.value;
     if (controller == null || !controller.value.isInitialized) return;
@@ -116,72 +377,91 @@ class ScannerController extends GetxController {
       // 2. Pause Preview (Freeze UI)
       await controller.pausePreview();
 
-      // 3. Process in Background (Crop center square)
+      // 3. Process Logic
+      // CHECK: Did user cancel immediately?
+      if (!isLoading.value) {
+        _resumeSafe();
+        return;
+      }
+
       final Uint8List rawBytes = await file.readAsBytes();
       final Uint8List processedBytes = await compute(
         processImageInIsolate,
         rawBytes,
       );
 
-      // 4. Save to Disk
-      final File savedImage = await saveToDisk(processedBytes);
-      savedImagePath.value = savedImage.path;
-      log("💾 Processed Image saved at: ${savedImage.path}");
-
-      // 5. Upload API
-      final result = await uploadForDetection(processedBytes);
-
-      // 6. Resume Preview
-      if (cameraController.value != null && controller.value.isInitialized) {
-        await controller.resumePreview();
+      // CHECK: Did user cancel during processing?
+      if (!isLoading.value) {
+        _resumeSafe();
+        return;
       }
 
-      // 7. Handle Result
+      final File savedImage = await saveToDisk(processedBytes);
+      savedImagePath.value = savedImage.path;
+
+      // 4. Upload API
+      final result = await uploadForDetection(processedBytes);
+
+      // CRITICAL CHECK: Did user cancel while API was loading?
+      // If isLoading is false here, it means the user tapped 'X' while we waited for API.
+      if (!isLoading.value) {
+        log("⚠️ API finished but user cancelled. Aborting navigation.");
+        _resumeSafe();
+        return;
+      }
+
+      // 5. Resume Preview (Normal flow)
+      await _resumeSafe();
+
+      // 6. Navigate (Only if user is still waiting)
       if (result != null) {
-        log("🎉 Detection SUCCESS");
+        isLoading.value = false; // Done loading
         RouteManagement.goToExploreCategory(
           arguments: {...result, "imagePath": savedImage.path},
         );
       } else {
-        Get.snackbar(
-          "No Match",
-          "Could not identify the marker. Try getting closer.",
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-          snackPosition: SnackPosition.TOP,
-          margin: const EdgeInsets.all(10),
-        );
+        // Show error but keep camera active
+        _showErrorSnackbar();
       }
     } catch (e) {
       log("❌ Scan error: $e");
-      Get.snackbar(
-        "Error",
-        "Failed to scan image",
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-        margin: const EdgeInsets.all(10),
-      );
-      savedImagePath.value = null;
-      if (cameraController.value != null && controller.value.isInitialized) {
-        await controller.resumePreview();
-      }
+      _showErrorSnackbar(msg: "Failed to scan image");
+      await _resumeSafe();
     } finally {
-      isLoading.value = false;
+      // Ensure loading is off if we didn't navigate
+      if (savedImagePath.value != null && isLoading.value) {
+        isLoading.value = false;
+      }
     }
   }
 
-  // ===================== IMAGE PROCESSING ISOLATE =====================
-  // This runs on a separate thread to prevent UI stutter
+  Future<void> _resumeSafe() async {
+    final controller = cameraController.value;
+    if (controller != null && controller.value.isInitialized) {
+      await controller.resumePreview();
+    }
+  }
+
+  void _showErrorSnackbar({String msg = "Could not identify the marker"}) {
+    isLoading.value = false; // Stop loading UI
+    Get.snackbar(
+      "No Match",
+      msg,
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+      snackPosition: SnackPosition.TOP,
+      margin: const EdgeInsets.all(10),
+    );
+  }
+
+  // ===================== IMAGE PROCESSING =====================
   static Uint8List processImageInIsolate(Uint8List inputBytes) {
     img.Image? original = img.decodeImage(inputBytes);
     if (original == null) return inputBytes;
 
-    // Crop a square from the center
     final int size = original.width < original.height
         ? original.width
         : original.height;
-
     img.Image cropped = img.copyCrop(
       original,
       x: (original.width - size) ~/ 2,
@@ -189,10 +469,7 @@ class ScannerController extends GetxController {
       width: size,
       height: size,
     );
-
-    // Resize to 800x800 for faster upload/processing
     img.Image resized = img.copyResize(cropped, width: 800, height: 800);
-
     return Uint8List.fromList(img.encodeJpg(resized, quality: 85));
   }
 
@@ -200,18 +477,7 @@ class ScannerController extends GetxController {
   Future<File> saveToDisk(Uint8List imageBytes) async {
     final Directory appDir = await getApplicationDocumentsDirectory();
     final Directory scanDir = Directory(p.join(appDir.path, 'scanned_images'));
-
-    if (!await scanDir.exists()) {
-      await scanDir.create(recursive: true);
-    }
-
-    // Cleanup old images (simple logic)
-    try {
-      if (scanDir.listSync().length > 10) {
-        scanDir.deleteSync(recursive: true);
-        await scanDir.create();
-      }
-    } catch (_) {}
+    if (!await scanDir.exists()) await scanDir.create(recursive: true);
 
     final String fileName = 'scan_${DateTime.now().millisecondsSinceEpoch}.jpg';
     final File imageFile = File(p.join(scanDir.path, fileName));
@@ -222,12 +488,10 @@ class ScannerController extends GetxController {
   // ===================== API UPLOAD =====================
   Future<Map<String, dynamic>?> uploadForDetection(Uint8List imageBytes) async {
     try {
-      log("📤 Sending image to API...");
       final request = http.MultipartRequest(
         'POST',
         Uri.parse('http://omap.okcl.org/api/patterns/detect/'),
       );
-
       request.files.add(
         http.MultipartFile.fromBytes('image', imageBytes, filename: 'scan.jpg'),
       );
@@ -235,25 +499,15 @@ class ScannerController extends GetxController {
       final response = await request.send().timeout(
         const Duration(seconds: 15),
       );
-
       final body = await response.stream.bytesToString();
-      log("🌐 API Status: ${response.statusCode}");
-      log("🌐 API Body: $body");
 
       if (response.statusCode == 200) {
-        final decoded = json.decode(body);
-        // Add specific check if your API returns {success: false} even on 200 OK
-        return decoded;
+        return json.decode(body);
       }
       return null;
     } catch (e) {
-      log("❌ API error: $e");
       return null;
     }
-  }
-  void resetScanner() {
-    savedImagePath.value = null; 
-    isLoading.value = false;     
   }
 
   @override

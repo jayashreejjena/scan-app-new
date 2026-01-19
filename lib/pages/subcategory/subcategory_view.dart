@@ -16,7 +16,6 @@ class SubCategoryItemsScreen extends StatelessWidget {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // --- App Bar ---
           SliverAppBar(
             pinned: true,
             floating: false,
@@ -50,8 +49,6 @@ class SubCategoryItemsScreen extends StatelessWidget {
               ),
             ),
           ),
-
-          // --- Content ---
           Obx(() {
             if (c.isLoading.value) {
               return const SliverFillRemaining(
@@ -59,7 +56,6 @@ class SubCategoryItemsScreen extends StatelessWidget {
                 child: Center(child: CircularProgressIndicator()),
               );
             }
-
             if (c.errorMessage.value != null) {
               return SliverFillRemaining(
                 hasScrollBody: false,
@@ -72,7 +68,6 @@ class SubCategoryItemsScreen extends StatelessWidget {
                 ),
               );
             }
-
             if (c.items.isEmpty) {
               return SliverFillRemaining(
                 hasScrollBody: false,
@@ -100,7 +95,6 @@ class SubCategoryItemsScreen extends StatelessWidget {
               );
             }
 
-            // --- List Items ---
             return SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               sliver: SliverList(
@@ -161,25 +155,46 @@ class _CinematicItemCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                // ---------------------------------------------------------
-                // LAYER 1: BACKGROUND (Image OR Stylish Placeholder)
-                // ---------------------------------------------------------
                 if (hasImage)
                   Hero(
                     tag: "img_${item.id}",
                     child: Image.network(
                       item.imageUrl!,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.fill,
+
+                      // 🔹 SHOW LOADING WHILE IMAGE IS FETCHING
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) {
+                          return child; // image fully loaded
+                        }
+
+                        return Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            // Your stylish placeholder in background
+                            _StylishPlaceholder(index: index),
+
+                            // Loader on top
+                            Center(
+                              child: CircularProgressIndicator(
+                                value:
+                                    loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                    : null,
+                                color: Colors.black,
+                                strokeWidth: 2.5,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                       errorBuilder: (_, __, ___) =>
                           _StylishPlaceholder(index: index),
                     ),
                   )
                 else
                   _StylishPlaceholder(index: index),
-
-                // ---------------------------------------------------------
-                // LAYER 2: TEXT OVERLAY
-                // ---------------------------------------------------------
                 Positioned(
                   bottom: 0,
                   left: 0,
@@ -203,7 +218,7 @@ class _CinematicItemCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          item.name ?? 'Unknown Location',
+                          item.name,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 22,
@@ -249,9 +264,6 @@ class _CinematicItemCard extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// HELPER: STYLISH FALLBACK
-// ---------------------------------------------------------------------------
 class _StylishPlaceholder extends StatelessWidget {
   final int index;
 
@@ -259,7 +271,6 @@ class _StylishPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Curated Gradient Palettes for "Travel/Air" vibe
     final palettes = [
       // 0: Ocean Blue (Classic)
       [const Color(0xFF2E3192), const Color(0xFF1BFFFF)],

@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'package:odisha_air_map/navigators/routes_management.dart';
+
 import 'object_detected_controller.dart';
 
 class ObjectDetectedScreen extends StatefulWidget {
@@ -19,6 +22,10 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
   late AnimationController _scaleController;
   late AnimationController _fadeController;
 
+  // State to handle instruction visibility
+  bool _showInstructions = true;
+  Timer? _instructionTimer;
+
   @override
   void initState() {
     super.initState();
@@ -31,19 +38,43 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     )..forward();
+    _startAutoCloseTimer();
+  }
+
+  void _startAutoCloseTimer() {
+    _instructionTimer?.cancel();
+    _instructionTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) {
+        setState(() {
+          _showInstructions = false;
+        });
+      }
+    });
+  }
+
+  void _handleInfoButtonTap() {
+    setState(() {
+      if (_showInstructions) {
+        _showInstructions = false;
+        _instructionTimer?.cancel(); 
+      } else {
+        _showInstructions = true;
+        _instructionTimer
+            ?.cancel(); 
+      }
+    });
   }
 
   @override
   void dispose() {
     _scaleController.dispose();
     _fadeController.dispose();
+    _instructionTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final h = MediaQuery.of(context).size.height;
-
     return Scaffold(
       backgroundColor: Colors.black,
       body: Obx(() {
@@ -52,7 +83,6 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
             child: CircularProgressIndicator(color: Colors.white),
           );
         }
-
         if (c.errorMessage.value != null) {
           return Center(
             child: Column(
@@ -72,27 +102,23 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
             ),
           );
         }
-
         if (c.isModelDownloading.value) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Progress Indicator Stack
                 SizedBox(
                   height: 60,
                   width: 60,
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      // The Ring
                       CircularProgressIndicator(
-                        value: c.downloadProgress.value, 
+                        value: c.downloadProgress.value,
                         color: Colors.cyanAccent,
                         backgroundColor: Colors.white24,
                         strokeWidth: 4,
                       ),
-                      // The Text in the middle
                       Center(
                         child: Text(
                           "${(c.downloadProgress.value * 100).toInt()}%",
@@ -116,7 +142,6 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Optional details text
                 Text(
                   "Please wait while we load assets",
                   style: TextStyle(
@@ -149,44 +174,89 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
               filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
               child: Container(color: Colors.black.withOpacity(0.3)),
             ),
-
             SafeArea(
               child: Column(
                 children: [
                   _buildHeader(),
                   Expanded(
-                    child: ScaleTransition(
-                      scale: Tween(
-                        begin: 0.85,
-                        end: 1.0,
-                      ).animate(_scaleController),
-                      child: FadeTransition(
-                        opacity: _fadeController,
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 24),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(28),
-                            border: Border.all(color: Colors.white54),
-                            color: Colors.black,
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(28),
-                            child: ModelViewer(
-                              src: 'file://$localPath',
-                              autoRotate: true,
-                              cameraControls: true,
-                              backgroundColor: Colors.transparent,
-                              alt:
-                                  "3D model of ${c.locationDetails.value?.name}",
+                    child: Stack(
+                      children: [
+                        // 1. The 3D Model Viewer
+                        ScaleTransition(
+                          scale: Tween(
+                            begin: 0.85,
+                            end: 1.0,
+                          ).animate(_scaleController),
+                          child: FadeTransition(
+                            opacity: _fadeController,
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(28),
+                                border: Border.all(color: Colors.white54),
+                                color: Colors.black,
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(28),
+                                child: ModelViewer(
+                                  src: 'file://$localPath',
+                                  autoRotate: true,
+                                  cameraControls: true,
+                                  backgroundColor: Colors.transparent,
+                                  alt:
+                                      "3D model of ${c.locationDetails.value?.name}",
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                        IgnorePointer(
+                          ignoring:
+                              !_showInstructions, // Allow touch when hidden
+                          child: AnimatedOpacity(
+                            opacity: _showInstructions ? 1.0 : 0.0,
+                            duration: const Duration(milliseconds: 300),
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(28),
+                                color: Colors.black.withOpacity(0.7),
+                              ),
+                              child: Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _buildGestureHint(
+                                      Icons.swipe,
+                                      "Swipe to Rotate",
+                                      "View 360° angles",
+                                    ),
+                                    const SizedBox(height: 30),
+                                    _buildGestureHint(
+                                      Icons.pinch,
+                                      "Pinch to Zoom",
+                                      "See closer details",
+                                    ),
+                                    const SizedBox(height: 30),
+                                    _buildGestureHint(
+                                      Icons.touch_app,
+                                      "Double Tap",
+                                      "Reset view",
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-
                   const SizedBox(height: 24),
-
                   GestureDetector(
                     onTap: () {
                       RouteManagement.goToContent();
@@ -238,13 +308,46 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
     );
   }
 
-  // Helper widget for the top header
+  Widget _buildGestureHint(IconData icon, String title, String subtitle) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, color: Colors.cyanAccent, size: 32),
+        const SizedBox(width: 16),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            Text(
+              subtitle,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.7),
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          _glassIconButton(icon: Icons.close, onTap: () => Get.back()),
+          // Changed to Arrow Back to avoid confusion with the overlay close button
+          _glassIconButton(
+            icon: Icons.arrow_back_ios_new_rounded,
+            onTap: () => Get.back(),
+          ),
           const Spacer(),
           Text(
             c.locationDetails.value?.name ?? "Object Detected",
@@ -256,7 +359,13 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
             overflow: TextOverflow.ellipsis,
           ),
           const Spacer(),
-          const SizedBox(width: 48), // Balance the close button
+
+          // INFO / CLOSE TOGGLE BUTTON
+          _glassIconButton(
+            icon: _showInstructions ? Icons.close : Icons.info_outline_rounded,
+            onTap: _handleInfoButtonTap,
+            isActive: _showInstructions, // Highlights button when active
+          ),
         ],
       ),
     );
@@ -265,15 +374,22 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
   Widget _glassIconButton({
     required IconData icon,
     required VoidCallback onTap,
+    bool isActive = false,
   }) {
     return Container(
+      height: 44,
+      width: 44,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: isActive
+            ? Colors.white.withOpacity(0.4)
+            : Colors.white.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       child: IconButton(
-        icon: Icon(icon, color: Colors.white),
+        icon: Icon(icon, color: Colors.white, size: 22),
         onPressed: onTap,
+        padding: EdgeInsets.zero,
       ),
     );
   }

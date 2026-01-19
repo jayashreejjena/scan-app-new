@@ -20,6 +20,10 @@ class RouteManagement {
     Get.offNamed<void>(Routes.scanner);
   }
 
+  static void goTOSacninfo() {
+    Get.offNamed<void>(Routes.scaninfo);
+  }
+
   static void goToExploreCategory({Map<String, dynamic>? arguments}) {
     Get.toNamed<void>(Routes.explorecategory, arguments: arguments);
   }

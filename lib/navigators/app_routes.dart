@@ -9,6 +9,7 @@ abstract class Routes {
   static const explorecategory = _Paths.explorecategory;
   static const subcategory = _Paths.subcategory;
   static const objectdetected = _Paths.objectdetected;
+  static const scaninfo = _Paths.scaninfo;
 }
 
 abstract class _Paths {
@@ -20,4 +21,5 @@ abstract class _Paths {
   static const explorecategory = '/explorecategory-view';
   static const subcategory = '/subcategory-view';
   static const objectdetected = '/objectdetected-view';
+  static const scaninfo = '/scaninfo-view';
 }

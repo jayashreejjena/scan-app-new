@@ -87,7 +87,7 @@ class _SplashScreenState extends State<SplashScreen>
             child: Column(
               children: [
                 const Text(
-                  "ODISHA SCAN",
+                  "ODISHA AIR MAP",
                   // "ODISHA AIR MAP",
                   style: TextStyle(
                     fontSize: 28,

@@ -1,10 +1,10 @@
 import 'dart:developer';
 import 'dart:io';
-import 'dart:ui'; // For ImageFilter
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart'; // For ScrollDirection
-import 'package:flutter/services.dart'; // For HapticFeedback
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:just_audio/just_audio.dart';
@@ -20,7 +20,8 @@ class ContentScreen extends StatefulWidget {
   State<ContentScreen> createState() => _ContentScreenState();
 }
 
-class _ContentScreenState extends State<ContentScreen> {
+class _ContentScreenState extends State<ContentScreen>
+    with WidgetsBindingObserver {
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   late final ObjectDetectedController c;
@@ -28,8 +29,6 @@ class _ContentScreenState extends State<ContentScreen> {
 
   bool isPlaying = false;
   bool isOpeningVideo = false;
-
-  // Controls are initially shown
   bool showControls = true;
 
   final ScrollController _scrollController = ScrollController();
@@ -37,6 +36,9 @@ class _ContentScreenState extends State<ContentScreen> {
   @override
   void initState() {
     super.initState();
+    // CRITICAL: Registers this class to listen to app minimization
+    WidgetsBinding.instance.addObserver(this);
+
     c = Get.find<ObjectDetectedController>();
 
     if (c.locationDetails.value == null) {
@@ -48,6 +50,29 @@ class _ContentScreenState extends State<ContentScreen> {
     }
 
     _autoPlayAudio();
+  }
+
+  // --- LIFECYCLE HANDLER ---
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    log("App Lifecycle Changed: $state");
+
+    // 'paused' = App is in background / minimized
+    // 'inactive' = App is in transition (like app switcher or notification shade)
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      // Check the ACTUAL player state directly, don't trust local booleans
+      if (_audioPlayer.playing) {
+        _audioPlayer.pause();
+        log("Background detected: Audio paused.");
+
+        // Update UI safely
+        if (mounted) {
+          setState(() => isPlaying = false);
+        }
+      }
+    }
   }
 
   Future<void> _autoPlayAudio() async {
@@ -72,6 +97,9 @@ class _ContentScreenState extends State<ContentScreen> {
 
   @override
   void dispose() {
+    // CRITICAL: Stop audio and remove observer
+    _audioPlayer.stop();
+    WidgetsBinding.instance.removeObserver(this);
     _audioPlayer.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -101,12 +129,10 @@ class _ContentScreenState extends State<ContentScreen> {
             child: NotificationListener<ScrollNotification>(
               onNotification: (notification) {
                 if (notification is UserScrollNotification) {
-                  // Hide controls when scrolling DOWN (reading)
                   if (notification.direction == ScrollDirection.reverse) {
                     if (showControls) setState(() => showControls = false);
-                  }
-                  // Show controls when scrolling UP
-                  else if (notification.direction == ScrollDirection.forward) {
+                  } else if (notification.direction ==
+                      ScrollDirection.forward) {
                     if (!showControls) setState(() => showControls = true);
                   }
                 }
@@ -131,7 +157,6 @@ class _ContentScreenState extends State<ContentScreen> {
                   child: SingleChildScrollView(
                     controller: _scrollController,
                     physics: const BouncingScrollPhysics(),
-                    // Increased top padding so text is visible under the button initially
                     padding: const EdgeInsets.fromLTRB(24, 85, 24, 100),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -150,16 +175,15 @@ class _ContentScreenState extends State<ContentScreen> {
             ),
           ),
 
-          // 3. Floating Controls (Redesigned Pill Shape)
+          // 3. Floating Controls
           Positioned(
-            top:
-                heroHeight - 40, // Aligned slightly overlapping the header area
+            top: heroHeight - 40,
             left: 0,
             right: 0,
             child: Center(child: _buildFloatingControls()),
           ),
 
-          // 4. App Bar (Back Button)
+          // 4. App Bar
           Positioned(top: 0, left: 0, right: 0, child: _buildAppBar()),
         ],
       ),
@@ -187,10 +211,8 @@ class _ContentScreenState extends State<ContentScreen> {
     String? modelSrc;
     if (localPath != null && File(localPath).existsSync()) {
       modelSrc = 'file://$localPath';
-      log("🚀 Using Local Model: $modelSrc");
     } else {
       modelSrc = c.getResolvedModelUrl();
-      log("🌐 Using Remote Model: $modelSrc");
     }
     return Container(
       decoration: const BoxDecoration(
@@ -277,6 +299,21 @@ class _ContentScreenState extends State<ContentScreen> {
     final facts = c.locationDetails.value!.facts;
     if (facts.isEmpty) return const SizedBox.shrink();
 
+    // Create a list of widgets by pairing items
+    List<Widget> factCards = [];
+
+    // Logic: Start at 0, increment by 2 to get pairs (Heading + Description)
+    for (int i = 0; i < facts.length; i += 2) {
+      String heading = facts[i].toString();
+
+      // Safety check: ensure description exists
+      String description = (i + 1 < facts.length)
+          ? facts[i + 1].toString()
+          : "";
+
+      factCards.add(_buildFactCard(heading, description));
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -299,12 +336,12 @@ class _ContentScreenState extends State<ContentScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        ...facts.map((fact) => _buildFactCard(fact.toString())).toList(),
+        ...factCards,
       ],
     );
   }
 
-  Widget _buildFactCard(String fact) {
+  Widget _buildFactCard(String heading, String description) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -320,36 +357,55 @@ class _ContentScreenState extends State<ContentScreen> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            margin: const EdgeInsets.only(top: 4),
-            width: 6,
-            height: 6,
-            decoration: const BoxDecoration(
-              color: Color(0xFF6C63FF),
-              shape: BoxShape.circle,
+          // --- HEADING (Bold) ---
+          Text(
+            heading,
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w700, // Bold
+              color: const Color(0xFF2D3748), // Darker color for heading
+              height: 1.3,
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              fact,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF4A5568),
-                height: 1.5,
+
+          const SizedBox(height: 8), // Space between heading and description
+          // --- DESCRIPTION (Bullet Point) ---
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Bullet Dot
+              Container(
+                margin: const EdgeInsets.only(top: 6),
+                width: 6,
+                height: 6,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF6C63FF),
+                  shape: BoxShape.circle,
+                ),
               ),
-            ),
+              const SizedBox(width: 12),
+
+              // Description Text
+              Expanded(
+                child: Text(
+                  description,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400, // Regular weight
+                    color: const Color(0xFF4A5568), // Slightly lighter color
+                    height: 1.5,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
-
-  // --- NEW FLOATING CONTROLS DESIGN ---
 
   Widget _buildFloatingControls() {
     return AnimatedSlide(
@@ -361,11 +417,10 @@ class _ContentScreenState extends State<ContentScreen> {
         duration: const Duration(milliseconds: 300),
         child: Container(
           height: 80,
-          width:
-              MediaQuery.of(context).size.width * 0.85, // Max width constraint
+          width: MediaQuery.of(context).size.width * 0.85,
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.95),
-            borderRadius: BorderRadius.circular(40), // Fully rounded pill
+            borderRadius: BorderRadius.circular(40),
             border: Border.all(
               color: Colors.white.withOpacity(0.6),
               width: 1.5,
@@ -387,7 +442,6 @@ class _ContentScreenState extends State<ContentScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              // Replay Button
               _controlButton(
                 icon: Icons.replay_rounded,
                 label: "Replay",
@@ -399,17 +453,9 @@ class _ContentScreenState extends State<ContentScreen> {
                   if (isPlaying) await _audioPlayer.play();
                 },
               ),
-
-              // Vertical Divider
               Container(width: 1, height: 24, color: Colors.grey.shade200),
-
-              // Main Play/Pause Button
               _mainPlayButton(),
-
-              // Vertical Divider
               Container(width: 1, height: 24, color: Colors.grey.shade200),
-
-              // Video Button
               _controlButton(
                 icon: Icons.videocam_rounded,
                 label: "Video",
@@ -432,7 +478,6 @@ class _ContentScreenState extends State<ContentScreen> {
       stream: _audioPlayer.playerStateStream,
       builder: (context, snapshot) {
         final playing = snapshot.data?.playing ?? false;
-
         return GestureDetector(
           onTap: () async {
             HapticFeedback.selectionClick();
