@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
-
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -74,33 +73,15 @@ class _ScannerScreenState extends State<ScannerScreen>
     }
   }
 
+  // Change this:
   Future<void> _handleScan() async {
-    if (_currentZoom < 1.2) {
-      _triggerError("Move closer or Zoom in");
-      return;
-    }
     if (c.isLoading.value) return;
 
     HapticFeedback.heavyImpact();
     await c.scanImage();
   }
 
-  void _triggerError(String message) {
-    setState(() {
-      _isAmbiguous = true;
-      _instructionText = message;
-    });
-    HapticFeedback.mediumImpact();
-    _errorResetTimer?.cancel();
-    _errorResetTimer = Timer(const Duration(seconds: 3), () {
-      if (mounted) {
-        setState(() {
-          _isAmbiguous = false;
-          _instructionText = "Align image within frame";
-        });
-      }
-    });
-  }
+
 
   @override
   void dispose() {
@@ -206,7 +187,7 @@ class _ScannerScreenState extends State<ScannerScreen>
                   ),
                 );
               }
-             
+
               // === SHOW NORMAL INSTRUCTIONS ===
               return Column(
                 children: [

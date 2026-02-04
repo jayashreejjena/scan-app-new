@@ -48,7 +48,6 @@ class _HomeScreenState extends State<HomeScreen>
                 ],
               ),
             ),
-
             child: SafeArea(
               child: Column(
                 children: [
@@ -81,7 +80,6 @@ class _HomeScreenState extends State<HomeScreen>
                       ],
                     ),
                   ),
-
                   // MAIN CONTENT
                   Expanded(
                     child: Center(
@@ -124,9 +122,7 @@ class _HomeScreenState extends State<HomeScreen>
                               ),
                               textAlign: TextAlign.center,
                             ),
-
                             const SizedBox(height: 60),
-
                             // MAIN BUTTON
                             Container(
                               decoration: BoxDecoration(
@@ -166,79 +162,78 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                             const SizedBox(height: 16),
 
-                            // Obx(() {
-                            //   // ✅ OFFLINE READY UI
-                            //   if (controller.isFullyDownloaded.value) {
-                            //     return Column(
-                            //       children: const [
-                            //         Icon(
-                            //           Icons.offline_pin,
-                            //           color: Color(0xff0A3D62),
-                            //           size: 42,
-                            //         ),
-                            //         SizedBox(height: 12),
-                            //         Text(
-                            //           "All content available offline",
-                            //           style: TextStyle(
-                            //             fontSize: 16,
-                            //             fontWeight: FontWeight.w600,
-                            //             color: Color(0xff0A3D62),
-                            //           ),
-                            //         ),
-                            //       ],
-                            //     );
-                            //   }
-                            //   if (controller.patterns.isNotEmpty) {
-                            //     return const Text(
-                            //       "New content available. Download to update.",
-                            //     );
-                            //   }
+                            Obx(() {
+                              if (controller.isFullyDownloaded.value) {
+                                return Column(
+                                  children: const [
+                                    Icon(
+                                      Icons.offline_pin,
+                                      color: Color(0xff0A3D62),
+                                      size: 42,
+                                    ),
+                                    SizedBox(height: 12),
+                                    Text(
+                                      "All content available offline",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xff0A3D62),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }
+                              if (controller.patterns.isNotEmpty) {
+                                return const Text(
+                                  "New content available. Download to update.",
+                                );
+                              }
 
-                            //   return Column(
-                            //     children: [
-                            //       OutlinedButton.icon(
-                            //         onPressed: controller.isLoading.value
-                            //             ? null
-                            //             : () {
-                            //                 controller.getAllContent();
-                            //               },
-                            //         icon: const Icon(
-                            //           Icons.download_for_offline,
-                            //           size: 20,
-                            //         ),
-                            //         label: const Text(
-                            //           "Download All Content",
-                            //           style: TextStyle(
-                            //             fontSize: 15,
-                            //             fontWeight: FontWeight.w500,
-                            //           ),
-                            //         ),
-                            //         style: OutlinedButton.styleFrom(
-                            //           foregroundColor: const Color(0xff0A3D62),
-                            //           side: const BorderSide(
-                            //             color: Color(0xff0A3D62),
-                            //           ),
-                            //           padding: const EdgeInsets.symmetric(
-                            //             horizontal: 32,
-                            //             vertical: 14,
-                            //           ),
-                            //           shape: RoundedRectangleBorder(
-                            //             borderRadius: BorderRadius.circular(32),
-                            //           ),
-                            //         ),
-                            //       ),
-                            //       const SizedBox(height: 12),
-                            //       if (controller.isLoading.value)
-                            //         Text(
-                            //           "Downloading ${(controller.downloadProgress.value * 100).toStringAsFixed(0)}%",
-                            //           style: const TextStyle(
-                            //             fontSize: 14,
-                            //             color: Color(0xff0A3D62),
-                            //           ),
-                            //         ),
-                            //     ],
-                            //   );
-                            // }),
+                              return Column(
+                                children: [
+                                  OutlinedButton.icon(
+                                    onPressed: controller.isLoading.value
+                                        ? null
+                                        : () {
+                                            controller.getAllContent();
+                                          },
+                                    icon: const Icon(
+                                      Icons.download_for_offline,
+                                      size: 20,
+                                    ),
+                                    label: const Text(
+                                      "Download All Content",
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: const Color(0xff0A3D62),
+                                      side: const BorderSide(
+                                        color: Color(0xff0A3D62),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 32,
+                                        vertical: 14,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(32),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  if (controller.isLoading.value)
+                                    Text(
+                                      "Downloading ${(controller.downloadProgress.value * 100).toStringAsFixed(0)}%",
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Color(0xff0A3D62),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            }),
                           ],
                         ),
                       ),

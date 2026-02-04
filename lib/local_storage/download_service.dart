@@ -9,7 +9,7 @@ class DownloadService {
     final file = File(localPath);
 
     if (await file.exists()) {
-      return localPath; // already downloaded
+      return localPath;
     }
 
     final response = await http.get(Uri.parse(url));

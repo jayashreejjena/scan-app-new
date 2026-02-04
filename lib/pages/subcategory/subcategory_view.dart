@@ -102,7 +102,7 @@ class SubCategoryItemsScreen extends StatelessWidget {
                   final item = c.items[index];
                   return _CinematicItemCard(
                     item: item,
-                    index: index, // Pass index for random color generation
+                    index: index, 
                     onTap: () {
                       RouteManagement.goToObjectDetected(int.parse(item.id));
                     },

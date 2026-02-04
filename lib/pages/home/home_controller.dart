@@ -37,7 +37,6 @@ class HomeController extends GetxController {
 
   Future<void> checkDownloadStatus() async {
     try {
-      // If nothing local, definitely not offline ready
       if (patternsBox.isEmpty) {
         isFullyDownloaded.value = false;
         log("🌐 No offline data yet");
