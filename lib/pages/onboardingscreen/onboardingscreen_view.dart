@@ -160,7 +160,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: kAccentColor.withOpacity(0.5),
+                            color: kAccentColor.withAlpha(128),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),
@@ -234,7 +234,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           end: Alignment.bottomCenter,
                           colors: [
                             Colors.transparent,
-                            Colors.black.withOpacity(0.2),
+                            Colors.black.withAlpha(51),
                           ],
                         ),
                       ),
@@ -282,7 +282,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             item.description,
             textAlign: TextAlign.start,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.6),
+              color: Colors.white.withAlpha(153),
               fontSize: 12,
               height: 1.6,
             ),
@@ -302,7 +302,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       height: 6,
       width: isActive ? 30 : 6,
       decoration: BoxDecoration(
-        color: isActive ? kAccentColor : Colors.white.withOpacity(0.2),
+        color: isActive ? kAccentColor : Colors.white.withAlpha(51),
         borderRadius: BorderRadius.circular(3),
       ),
     );

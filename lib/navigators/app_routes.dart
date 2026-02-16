@@ -10,6 +10,7 @@ abstract class Routes {
   static const subcategory = _Paths.subcategory;
   static const objectdetected = _Paths.objectdetected;
   static const scaninfo = _Paths.scaninfo;
+  static const downloadlist = _Paths.downloadlist;
 }
 
 abstract class _Paths {
@@ -22,4 +23,5 @@ abstract class _Paths {
   static const subcategory = '/subcategory-view';
   static const objectdetected = '/objectdetected-view';
   static const scaninfo = '/scaninfo-view';
+  static const downloadlist = '/downloadlist-view';
 }

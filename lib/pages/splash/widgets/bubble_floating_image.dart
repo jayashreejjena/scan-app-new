@@ -15,7 +15,7 @@ class _BubbleFloatingImagesState extends State<BubbleFloatingImages>
   final Random random = Random();
   List<_BubbleImage> bubbles = [];
  
-  double screenWidth = 100; // will be updated in build
+  double screenWidth = 100; 
  
   @override
   void initState() {
@@ -39,7 +39,6 @@ class _BubbleFloatingImagesState extends State<BubbleFloatingImages>
     }
   }
  
-  /// Ensures bubbles do NOT overlap (now using screenWidth passed externally)
   void assignNonOverlappingPosition(_BubbleImage bubble) {
     const int maxAttempts = 20;
  
@@ -89,12 +88,12 @@ class _BubbleFloatingImagesState extends State<BubbleFloatingImages>
         ...bubbles.map(
           (bubble) => AnimatedBuilder(
             animation: bubble.controller,
-            builder: (_, __) {
+            builder: (_, _) {
               final progress = bubble.controller.value;
  
               final dy = 1 - progress;
               final dx =
-                  bubble.startX + sin(progress * 2 * pi) * 0.03; // sway motion
+                  bubble.startX + sin(progress * 2 * pi) * 0.03; 
  
               if (progress > 0.98) {
                 assignNonOverlappingPosition(bubble);

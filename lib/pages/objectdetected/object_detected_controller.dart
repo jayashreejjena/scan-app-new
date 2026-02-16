@@ -49,7 +49,7 @@ class ObjectDetectedController extends GetxController {
   final errorMessage = RxnString();
   final locationDetails = Rxn<LocationDetails>();
   final localModelPath = RxnString();
-  
+
   // 1. ADDED: Variable to track download progress (0.0 to 1.0)
   final downloadProgress = 0.0.obs;
 
@@ -110,52 +110,59 @@ class ObjectDetectedController extends GetxController {
   Future<void> _downloadAndCacheModel(String onlineUrl) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
-      final fileName = onlineUrl.split('/').last;
+      // Use a unique name based on locationId to prevent loading the wrong model
+      String fileName = "model_${locationId}.glb";
       final file = File('${directory.path}/$fileName');
 
-      // Check cache first
       if (await file.exists()) {
-        log("📂 Found cached model at: ${file.path}");
+        log("📂 Using cached model: ${file.path}");
         localModelPath.value = file.path;
-        return; 
+        return;
       }
 
       isModelDownloading.value = true;
-      downloadProgress.value = 0.0; // Reset progress
-      log("⬇️ Downloading model from: $onlineUrl");
+      downloadProgress.value = 0.0;
 
-      // --- START NATIVE DOWNLOAD LOGIC ---
-      final httpClient = HttpClient();
-      final request = await httpClient.getUrl(Uri.parse(onlineUrl));
-      final response = await request.close();
+      // IMPORTANT: SharePoint links often need "download=1" or specific handling
+      final client = http.Client();
+      final request = http.Request('GET', Uri.parse(onlineUrl))
+        ..followRedirects = true; // Crucial for SharePoint
+
+      final response = await client.send(request);
 
       if (response.statusCode == 200) {
-        final totalBytes = response.contentLength;
+        final totalBytes = response.contentLength ?? 0;
         int receivedBytes = 0;
+        List<int> bytes = [];
 
-        final IOSink sink = file.openWrite();
-
-        // Stream the response to track progress
-        await response.listen((List<int> chunk) {
+        await for (var chunk in response.stream) {
+          bytes.addAll(chunk);
           receivedBytes += chunk.length;
-          sink.add(chunk);
-
-          if (totalBytes != -1) {
-            // Update the observable variable
+          if (totalBytes > 0) {
             downloadProgress.value = receivedBytes / totalBytes;
           }
-        }).asFuture();
+        }
 
-        await sink.flush();
-        await sink.close();
+        // Verify if we actually got a GLB or just HTML text
+        String startOfFile = String.fromCharCodes(bytes.take(10));
+        if (startOfFile.contains("<!DOCT") || startOfFile.contains("<html")) {
+          log(
+            "❌ ERROR: Downloaded HTML instead of GLB. Check SharePoint Permissions.",
+          );
+          errorMessage.value =
+              "Link expired or private. Please update the model link.";
+          return;
+        }
 
-        log("💾 Model saved to: ${file.path}");
+        await file.writeAsBytes(bytes);
+        log("💾 Model saved: ${file.path}");
         localModelPath.value = file.path;
       } else {
-        log("⚠️ Failed to download model: ${response.statusCode}");
+        errorMessage.value = "Server error: ${response.statusCode}";
       }
     } catch (e) {
-      log("❌ Error caching model: $e");
+      log("❌ Download Error: $e");
+      errorMessage.value = "Connection failed";
     } finally {
       isModelDownloading.value = false;
     }

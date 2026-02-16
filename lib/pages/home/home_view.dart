@@ -73,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen>
                           'Scan • Discover • Explore',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.white.withOpacity(0.85),
+                            color: Colors.white.withAlpha(217),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -94,10 +94,7 @@ class _HomeScreenState extends State<HomeScreen>
                                 child: Image.asset("assets/images/odisha.png"),
                               ),
                             ),
-
                             const SizedBox(height: 48),
-
-                            // HEADING
                             Text(
                               "Odisha AIR Map",
                               style: Theme.of(context).textTheme.headlineSmall
@@ -116,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen>
                               "Point your camera at the Odisha map to explore\nfamous tourist destinations in immersive 3D.",
                               style: TextStyle(
                                 fontSize: 15,
-                                color: Colors.white.withOpacity(0.9),
+                                color: Colors.white.withAlpha(230),
                                 height: 1.5,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -128,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen>
                               decoration: BoxDecoration(
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.3),
+                                    color: Colors.black.withAlpha(77),
                                     blurRadius: 20,
                                     offset: const Offset(0, 10),
                                   ),
@@ -138,9 +135,12 @@ class _HomeScreenState extends State<HomeScreen>
                                 onPressed: () {
                                   RouteManagement.goToScanner();
                                 },
-                                icon: const Icon(Icons.camera_alt, size: 24),
+                                icon: const Icon(
+                                  Icons.explore_rounded,
+                                  size: 24,
+                                ),
                                 label: const Text(
-                                  "Start AR Scan",
+                                  "Explore Online",
                                   style: TextStyle(
                                     fontSize: 17,
                                     fontWeight: FontWeight.w600,
@@ -160,80 +160,80 @@ class _HomeScreenState extends State<HomeScreen>
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            // const SizedBox(height: 16),
 
-                            Obx(() {
-                              if (controller.isFullyDownloaded.value) {
-                                return Column(
-                                  children: const [
-                                    Icon(
-                                      Icons.offline_pin,
-                                      color: Color(0xff0A3D62),
-                                      size: 42,
-                                    ),
-                                    SizedBox(height: 12),
-                                    Text(
-                                      "All content available offline",
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xff0A3D62),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }
-                              if (controller.patterns.isNotEmpty) {
-                                return const Text(
-                                  "New content available. Download to update.",
-                                );
-                              }
+                            // Obx(() {
+                            // if (controller.isFullyDownloaded.value) {
+                            //   return Column(
+                            //     children: const [
+                            //       Icon(
+                            //         Icons.offline_pin,
+                            //         color: Color(0xff0A3D62),
+                            //         size: 42,
+                            //       ),
+                            //       SizedBox(height: 12),
+                            //       Text(
+                            //         "All content available offline",
+                            //         style: TextStyle(
+                            //           fontSize: 16,
+                            //           fontWeight: FontWeight.w600,
+                            //           color: Color(0xff0A3D62),
+                            //         ),
+                            //       ),
+                            //     ],
+                            //   );
+                            // }
+                            // if (controller.patterns.isNotEmpty) {
+                            //   return const Text(
+                            //     "New content available. Download to update.",
+                            //   );
+                            // }
 
-                              return Column(
-                                children: [
-                                  OutlinedButton.icon(
-                                    onPressed: controller.isLoading.value
-                                        ? null
-                                        : () {
-                                            controller.getAllContent();
-                                          },
-                                    icon: const Icon(
-                                      Icons.download_for_offline,
-                                      size: 20,
-                                    ),
-                                    label: const Text(
-                                      "Download All Content",
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: const Color(0xff0A3D62),
-                                      side: const BorderSide(
-                                        color: Color(0xff0A3D62),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 32,
-                                        vertical: 14,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(32),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  if (controller.isLoading.value)
-                                    Text(
-                                      "Downloading ${(controller.downloadProgress.value * 100).toStringAsFixed(0)}%",
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Color(0xff0A3D62),
-                                      ),
-                                    ),
-                                ],
-                              );
-                            }),
+                            // return Column(
+                            //   children: [
+                            //     OutlinedButton.icon(
+                            //       onPressed: controller.isLoading.value
+                            //           ? null
+                            //           : () {
+                            //               controller.getAllContent();
+                            //             },
+                            //       icon: const Icon(
+                            //         Icons.download_for_offline,
+                            //         size: 20,
+                            //       ),
+                            //       label: const Text(
+                            //         "Download District",
+                            //         style: TextStyle(
+                            //           fontSize: 15,
+                            //           fontWeight: FontWeight.w500,
+                            //         ),
+                            //       ),
+                            //       style: OutlinedButton.styleFrom(
+                            //         foregroundColor: const Color(0xff0A3D62),
+                            //         side: const BorderSide(
+                            //           color: Color(0xff0A3D62),
+                            //         ),
+                            //         padding: const EdgeInsets.symmetric(
+                            //           horizontal: 32,
+                            //           vertical: 14,
+                            //         ),
+                            //         shape: RoundedRectangleBorder(
+                            //           borderRadius: BorderRadius.circular(32),
+                            //         ),
+                            //       ),
+                            //     ),
+                            //     // const SizedBox(height: 12),
+                            //     // if (controller.isLoading.value)
+                            //     //   Text(
+                            //     //     "Downloading ${(controller.downloadProgress.value * 100).toStringAsFixed(0)}%",
+                            //     //     style: const TextStyle(
+                            //     //       fontSize: 14,
+                            //     //       color: Color(0xff0A3D62),
+                            //     //     ),
+                            //     //   ),
+                            //   ],
+                            // );
+                            // }),
                           ],
                         ),
                       ),

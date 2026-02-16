@@ -1,7 +1,6 @@
 import 'dart:developer';
 import 'dart:io';
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -36,7 +35,6 @@ class _ContentScreenState extends State<ContentScreen>
   @override
   void initState() {
     super.initState();
-    // CRITICAL: Registers this class to listen to app minimization
     WidgetsBinding.instance.addObserver(this);
 
     c = Get.find<ObjectDetectedController>();
@@ -52,22 +50,16 @@ class _ContentScreenState extends State<ContentScreen>
     _autoPlayAudio();
   }
 
-  // --- LIFECYCLE HANDLER ---
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     log("App Lifecycle Changed: $state");
 
-    // 'paused' = App is in background / minimized
-    // 'inactive' = App is in transition (like app switcher or notification shade)
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
-      // Check the ACTUAL player state directly, don't trust local booleans
       if (_audioPlayer.playing) {
         _audioPlayer.pause();
         log("Background detected: Audio paused.");
-
-        // Update UI safely
         if (mounted) {
           setState(() => isPlaying = false);
         }
@@ -97,7 +89,6 @@ class _ContentScreenState extends State<ContentScreen>
 
   @override
   void dispose() {
-    // CRITICAL: Stop audio and remove observer
     _audioPlayer.stop();
     WidgetsBinding.instance.removeObserver(this);
     _audioPlayer.dispose();
@@ -114,7 +105,6 @@ class _ContentScreenState extends State<ContentScreen>
       backgroundColor: const Color(0xFFF8F9FA),
       body: Stack(
         children: [
-          // 1. Hero / 3D Model Section
           Positioned(
             top: 0,
             left: 0,
@@ -122,8 +112,6 @@ class _ContentScreenState extends State<ContentScreen>
             height: heroHeight,
             child: _buildHeroSection(),
           ),
-
-          // 2. Scrollable Content
           Positioned.fill(
             top: heroHeight - 40,
             child: NotificationListener<ScrollNotification>(
@@ -174,16 +162,12 @@ class _ContentScreenState extends State<ContentScreen>
               ),
             ),
           ),
-
-          // 3. Floating Controls
           Positioned(
             top: heroHeight - 40,
             left: 0,
             right: 0,
             child: Center(child: _buildFloatingControls()),
           ),
-
-          // 4. App Bar
           Positioned(top: 0, left: 0, right: 0, child: _buildAppBar()),
         ],
       ),
@@ -255,7 +239,7 @@ class _ContentScreenState extends State<ContentScreen>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: const Color(0xFF6C63FF).withOpacity(0.1),
+            color: const Color(0xFF6C63FF).withAlpha(26),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
@@ -298,15 +282,10 @@ class _ContentScreenState extends State<ContentScreen>
   Widget _buildFactsSection() {
     final facts = c.locationDetails.value!.facts;
     if (facts.isEmpty) return const SizedBox.shrink();
-
-    // Create a list of widgets by pairing items
     List<Widget> factCards = [];
-
-    // Logic: Start at 0, increment by 2 to get pairs (Heading + Description)
     for (int i = 0; i < facts.length; i += 2) {
       String heading = facts[i].toString();
 
-      // Safety check: ensure description exists
       String description = (i + 1 < facts.length)
           ? facts[i + 1].toString()
           : "";
@@ -351,7 +330,7 @@ class _ContentScreenState extends State<ContentScreen>
         border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.05),
+            color: Colors.grey.withAlpha(13),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -360,23 +339,20 @@ class _ContentScreenState extends State<ContentScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- HEADING (Bold) ---
           Text(
             heading,
             style: GoogleFonts.inter(
               fontSize: 16,
-              fontWeight: FontWeight.w700, // Bold
-              color: const Color(0xFF2D3748), // Darker color for heading
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF2D3748),
               height: 1.3,
             ),
           ),
 
-          const SizedBox(height: 8), // Space between heading and description
-          // --- DESCRIPTION (Bullet Point) ---
+          const SizedBox(height: 8),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Bullet Dot
               Container(
                 margin: const EdgeInsets.only(top: 6),
                 width: 6,
@@ -387,15 +363,13 @@ class _ContentScreenState extends State<ContentScreen>
                 ),
               ),
               const SizedBox(width: 12),
-
-              // Description Text
               Expanded(
                 child: Text(
                   description,
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    fontWeight: FontWeight.w400, // Regular weight
-                    color: const Color(0xFF4A5568), // Slightly lighter color
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF4A5568),
                     height: 1.5,
                   ),
                 ),
@@ -419,21 +393,18 @@ class _ContentScreenState extends State<ContentScreen>
           height: 80,
           width: MediaQuery.of(context).size.width * 0.85,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.95),
+            color: Colors.white.withAlpha(242),
             borderRadius: BorderRadius.circular(40),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.6),
-              width: 1.5,
-            ),
+            border: Border.all(color: Colors.white.withAlpha(153), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF6C63FF).withOpacity(0.25),
+                color: const Color(0xFF6C63FF).withAlpha(64),
                 blurRadius: 25,
                 spreadRadius: 0,
                 offset: const Offset(0, 10),
               ),
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withAlpha(13),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -460,7 +431,7 @@ class _ContentScreenState extends State<ContentScreen>
                 icon: Icons.videocam_rounded,
                 label: "Video",
                 color: const Color(0xFFFF6584),
-                bgColor: const Color(0xFFFF6584).withOpacity(0.1),
+                bgColor: const Color(0xFFFF6584).withAlpha(26),
                 onTap: () {
                   HapticFeedback.mediumImpact();
                   _openVideo();
@@ -503,7 +474,7 @@ class _ContentScreenState extends State<ContentScreen>
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF6C63FF).withOpacity(0.4),
+                  color: const Color(0xFF6C63FF).withAlpha(102),
                   blurRadius: 12,
                   spreadRadius: playing ? 2 : 4,
                   offset: const Offset(0, 6),
@@ -597,9 +568,9 @@ class _ContentScreenState extends State<ContentScreen>
             height: 44,
             width: 44,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withAlpha(51),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withOpacity(0.3)),
+              border: Border.all(color: Colors.white.withAlpha(77)),
             ),
             child: Icon(icon, color: Colors.white, size: 22),
           ),

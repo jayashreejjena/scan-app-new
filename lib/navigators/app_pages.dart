@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import 'package:odisha_air_map/pages/content/content_binding.dart';
 import 'package:odisha_air_map/pages/content/content_view.dart';
+import 'package:odisha_air_map/pages/downloaddist/downloaddist_binding.dart';
+import 'package:odisha_air_map/pages/downloaddist/downloaddist_view.dart';
 import 'package:odisha_air_map/pages/explorecategory/explorecategory_binding.dart';
 import 'package:odisha_air_map/pages/explorecategory/explorecategory_view.dart';
 import 'package:odisha_air_map/pages/home/home_binding.dart';
@@ -90,6 +92,13 @@ class AppPages {
       transitionDuration: transistionDuration,
       page: () => ScannerInfoScreen(),
       binding: ScaninfoscreenBinding(),
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: _Paths.downloadlist,
+      transitionDuration: transistionDuration,
+      page: () => DistrictScreen(),
+      binding: DownloaddistBinding(),
       transition: Transition.rightToLeft,
     ),
   ];

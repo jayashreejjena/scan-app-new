@@ -102,7 +102,7 @@ class SubCategoryItemsScreen extends StatelessWidget {
                   final item = c.items[index];
                   return _CinematicItemCard(
                     item: item,
-                    index: index, 
+                    index: index,
                     onTap: () {
                       RouteManagement.goToObjectDetected(int.parse(item.id));
                     },
@@ -130,8 +130,7 @@ class _CinematicItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Check if image is valid
-    final bool hasImage = item.imageUrl != null && item.imageUrl!.isNotEmpty;
+    final bool hasImage = item.imageUrl.isNotEmpty;
 
     return Container(
       height: 240,
@@ -140,7 +139,7 @@ class _CinematicItemCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withAlpha(20),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -159,22 +158,17 @@ class _CinematicItemCard extends StatelessWidget {
                   Hero(
                     tag: "img_${item.id}",
                     child: Image.network(
-                      item.imageUrl!,
+                      item.imageUrl,
                       fit: BoxFit.fill,
-
-                      // 🔹 SHOW LOADING WHILE IMAGE IS FETCHING
                       loadingBuilder: (context, child, loadingProgress) {
                         if (loadingProgress == null) {
-                          return child; // image fully loaded
+                          return child;
                         }
 
                         return Stack(
                           fit: StackFit.expand,
                           children: [
-                            // Your stylish placeholder in background
                             _StylishPlaceholder(index: index),
-
-                            // Loader on top
                             Center(
                               child: CircularProgressIndicator(
                                 value:
@@ -189,7 +183,7 @@ class _CinematicItemCard extends StatelessWidget {
                           ],
                         );
                       },
-                      errorBuilder: (_, __, ___) =>
+                      errorBuilder: (_, _, _) =>
                           _StylishPlaceholder(index: index),
                     ),
                   )
@@ -207,8 +201,8 @@ class _CinematicItemCard extends StatelessWidget {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          Colors.black.withOpacity(0.7),
-                          Colors.black.withOpacity(0.9),
+                          Colors.black.withAlpha(179),
+                          Colors.black.withAlpha(230),
                         ],
                         stops: const [0.0, 0.6, 1.0],
                       ),
@@ -237,7 +231,7 @@ class _CinematicItemCard extends StatelessWidget {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withAlpha(51),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Text(
@@ -272,15 +266,10 @@ class _StylishPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palettes = [
-      // 0: Ocean Blue (Classic)
       [const Color(0xFF2E3192), const Color(0xFF1BFFFF)],
-      // 1: Sunset Orange (Warmth)
       [const Color(0xFFFF512F), const Color(0xFFDD2476)],
-      // 2: Lush Green (Nature)
       [const Color(0xFF11998e), const Color(0xFF38ef7d)],
-      // 3: Royal Purple (Mystery)
       [const Color(0xFF8E2DE2), const Color(0xFF4A00E0)],
-      // 4: Midnight (Night Life)
       [const Color(0xFF0f2027), const Color(0xFF2c5364)],
     ];
 
@@ -288,7 +277,6 @@ class _StylishPlaceholder extends StatelessWidget {
 
     return Stack(
       children: [
-        // 1. Base Gradient
         Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -298,31 +286,26 @@ class _StylishPlaceholder extends StatelessWidget {
             ),
           ),
         ),
-
-        // 2. Artistic Background Shape (Watermark effect)
         Positioned(
           right: -40,
           top: -40,
           child: Opacity(
             opacity: 0.15,
             child: Icon(
-              // Vary icons based on index too
               index % 2 == 0 ? Icons.location_on_rounded : Icons.map_rounded,
               size: 200,
               color: Colors.white,
             ),
           ),
         ),
-
-        // 3. Central Icon
         Center(
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withAlpha(38),
               border: Border.all(
-                color: Colors.white.withOpacity(0.3),
+                color: Colors.white.withAlpha(77),
                 width: 1,
               ),
             ),

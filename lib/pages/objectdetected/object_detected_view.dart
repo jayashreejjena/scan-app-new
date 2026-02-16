@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -21,8 +22,6 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
 
   late AnimationController _scaleController;
   late AnimationController _fadeController;
-
-  // State to handle instruction visibility
   bool _showInstructions = true;
   Timer? _instructionTimer;
 
@@ -56,11 +55,10 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
     setState(() {
       if (_showInstructions) {
         _showInstructions = false;
-        _instructionTimer?.cancel(); 
+        _instructionTimer?.cancel();
       } else {
         _showInstructions = true;
-        _instructionTimer
-            ?.cancel(); 
+        _instructionTimer?.cancel();
       }
     });
   }
@@ -145,7 +143,7 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
                 Text(
                   "Please wait while we load assets",
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
+                    color: Colors.white.withAlpha(128),
                     fontSize: 12,
                   ),
                 ),
@@ -172,7 +170,7 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
           children: [
             BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: Container(color: Colors.black.withOpacity(0.3)),
+              child: Container(color: Colors.black.withAlpha(77)),
             ),
             SafeArea(
               child: Column(
@@ -200,14 +198,27 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
                               ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(28),
-                                child: ModelViewer(
-                                  src: 'file://$localPath',
+                                child: 
+                                ModelViewer(
+                                  src: Platform.isAndroid
+                                      ? 'file://$localPath'
+                                      : localPath,
                                   autoRotate: true,
                                   cameraControls: true,
                                   backgroundColor: Colors.transparent,
                                   alt:
                                       "3D model of ${c.locationDetails.value?.name}",
+                                  loading: Loading
+                                      .eager, 
                                 ),
+                                // child: ModelViewer(
+                                //   src: 'file://$localPath',
+                                //   autoRotate: true,
+                                //   cameraControls: true,
+                                //   backgroundColor: Colors.transparent,
+                                //   alt:
+                                //       "3D model of ${c.locationDetails.value?.name}",
+                                // ),
                               ),
                             ),
                           ),
@@ -224,7 +235,7 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
                               ),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(28),
-                                color: Colors.black.withOpacity(0.7),
+                                color: Colors.black.withAlpha(179),
                               ),
                               child: Center(
                                 child: Column(
@@ -269,7 +280,7 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.white.withOpacity(0.1),
+                            color: Colors.white.withAlpha(26),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -328,7 +339,7 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
             Text(
               subtitle,
               style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withAlpha(179),
                 fontSize: 12,
               ),
             ),
@@ -381,10 +392,10 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
       width: 44,
       decoration: BoxDecoration(
         color: isActive
-            ? Colors.white.withOpacity(0.4)
-            : Colors.white.withOpacity(0.2),
+            ? Colors.white.withAlpha(102)
+            : Colors.white.withAlpha(51),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withAlpha(26)),
       ),
       child: IconButton(
         icon: Icon(icon, color: Colors.white, size: 22),

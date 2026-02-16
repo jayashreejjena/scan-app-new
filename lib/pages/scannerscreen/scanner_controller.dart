@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
+
 import 'package:camera/camera.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -98,8 +99,6 @@ class ScannerController extends GetxController {
 
     try {
       isLoading.value = true;
-      await controller.setFocusMode(FocusMode.locked);
-      await Future.delayed(const Duration(milliseconds: 300));
 
       savedImagePath.value = null;
 
@@ -233,3 +232,4 @@ class ScannerController extends GetxController {
     super.onClose();
   }
 }
+ 

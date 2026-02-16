@@ -25,7 +25,7 @@ class ExploreCategoriesScreen extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withAlpha(13),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -105,7 +105,7 @@ class ExploreCategoriesScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withAlpha(13),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -197,7 +197,7 @@ class _DesignerCategoryCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: palette.accent.withOpacity(0.1),
+              color: palette.accent.withAlpha(26),
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),
@@ -215,7 +215,7 @@ class _DesignerCategoryCard extends StatelessWidget {
                   child: Icon(
                     category.icon,
                     size: 100,
-                    color: palette.accent.withOpacity(0.15),
+                    color: palette.accent.withAlpha(38),
                   ),
                 ),
               ),
@@ -232,7 +232,7 @@ class _DesignerCategoryCard extends StatelessWidget {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withAlpha(13),
                             blurRadius: 8,
                             offset: const Offset(0, 3),
                           ),

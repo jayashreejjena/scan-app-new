@@ -29,8 +29,8 @@ class _ScannerScreenState extends State<ScannerScreen>
   double _baseZoom = 1.0;
   bool _isFlashOn = false;
 
-  bool _isAmbiguous = false;
-  String _instructionText = "Align image within frame";
+  final bool _isAmbiguous = false;
+  final String _instructionText = "Align image within frame";
   Timer? _errorResetTimer;
 
   @override
@@ -81,8 +81,6 @@ class _ScannerScreenState extends State<ScannerScreen>
     await c.scanImage();
   }
 
-
-
   @override
   void dispose() {
     _breathingController.dispose();
@@ -95,8 +93,6 @@ class _ScannerScreenState extends State<ScannerScreen>
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final scanWindowSize = size.width * 0.75;
-
-    // The Square Box
     final cutoutRect = Rect.fromCenter(
       center: Offset(size.width / 2, size.height / 2 - 120),
       width: scanWindowSize,
@@ -104,21 +100,17 @@ class _ScannerScreenState extends State<ScannerScreen>
     );
 
     final Color activeColor = _isAmbiguous
-        ? const Color(0xFFFF5252) // Red when error
-        : const Color(0xFF64FFDA); // Teal when normal
+        ? const Color(0xFFFF5252) 
+        : const Color(0xFF64FFDA); 
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. Camera Preview
           _buildCameraPreview(),
-
-          // 2. Soft Vignette Overlay
           _buildSoftOverlay(cutoutRect),
 
-          // 3. CAPTURED IMAGE OVERLAY
           Obx(() {
             if (c.savedImagePath.value != null && c.isLoading.value) {
               return Positioned.fromRect(
@@ -134,11 +126,7 @@ class _ScannerScreenState extends State<ScannerScreen>
             }
             return const SizedBox.shrink();
           }),
-
-          // 4. Viewfinder Borders
           _buildAnimatedViewfinder(cutoutRect, activeColor),
-
-          // 5. Top Controls
           Positioned(
             top: MediaQuery.of(context).padding.top + 10,
             left: 20,
@@ -151,8 +139,6 @@ class _ScannerScreenState extends State<ScannerScreen>
                   isActive: false,
                   onTap: () => RouteManagement.goToHome(),
                 ),
-                // Top status bar commented out as per previous code
-                // _buildTopStatus(activeColor),
                 _glassButton(
                   icon: Icons.info_outline_rounded,
                   isActive: false,
@@ -162,7 +148,6 @@ class _ScannerScreenState extends State<ScannerScreen>
             ),
           ),
 
-          // 6. Instructions & Error Messages - FIXED HERE
           Positioned(
             top: cutoutRect.bottom + 50,
             left: 0,
@@ -171,15 +156,13 @@ class _ScannerScreenState extends State<ScannerScreen>
               if (c.isLoading.value) {
                 return const SizedBox.shrink();
               }
-
-              // === SHOW ERROR MESSAGE IF AMBIGUOUS ===
               if (_isAmbiguous) {
                 return Center(
                   child: Text(
                     _instructionText,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      color: Color(0xFFFF5252), // Red Color
+                      color: Color(0xFFFF5252),
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       shadows: [Shadow(color: Colors.black, blurRadius: 4)],
@@ -187,8 +170,6 @@ class _ScannerScreenState extends State<ScannerScreen>
                   ),
                 );
               }
-
-              // === SHOW NORMAL INSTRUCTIONS ===
               return Column(
                 children: [
                   const Text(
@@ -260,16 +241,12 @@ class _ScannerScreenState extends State<ScannerScreen>
               );
             }),
           ),
-
-          // 7. Bottom Controls
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
             child: _buildBottomDeck(activeColor),
           ),
-
-          // 8. Loading Overlay
           Obx(() {
             if (c.isLoading.value) {
               return Material(
@@ -277,7 +254,7 @@ class _ScannerScreenState extends State<ScannerScreen>
                 child: Container(
                   width: double.infinity,
                   height: double.infinity,
-                  color: Colors.black.withOpacity(0.85),
+                  color: Colors.black.withAlpha(217),
                   child: Stack(
                     children: [
                       Positioned(
@@ -311,7 +288,7 @@ class _ScannerScreenState extends State<ScannerScreen>
                                   BoxShadow(
                                     color: const Color(
                                       0xFF64FFDA,
-                                    ).withOpacity(0.5),
+                                    ).withAlpha(128),
                                     blurRadius: 20,
                                     spreadRadius: 5,
                                   ),
@@ -332,8 +309,6 @@ class _ScannerScreenState extends State<ScannerScreen>
       ),
     );
   }
-
-  // --- WIDGET BUILDERS ---
 
   Widget _buildCameraPreview() {
     return Obx(() {
@@ -405,14 +380,14 @@ class _ScannerScreenState extends State<ScannerScreen>
               painter: TechCornersPainter(color: color),
               child: Container(
                 decoration: BoxDecoration(
-                  border: Border.all(color: color.withOpacity(0.1), width: 1),
+                  border: Border.all(color: color.withAlpha(26), width: 1),
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: _isAmbiguous
                     ? Center(
                         child: Icon(
                           Icons.priority_high_rounded,
-                          color: color.withOpacity(0.8),
+                          color: color.withAlpha(204),
                           size: 60,
                         ),
                       )
@@ -425,41 +400,41 @@ class _ScannerScreenState extends State<ScannerScreen>
     );
   }
 
-  Widget _buildTopStatus(Color color) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(30),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: Colors.white12),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                _isAmbiguous ? Icons.warning_amber_rounded : Icons.auto_awesome,
-                color: color,
-                size: 16,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                _instructionText.toUpperCase(),
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  // Widget _buildTopStatus(Color color) {
+  //   return ClipRRect(
+  //     borderRadius: BorderRadius.circular(30),
+  //     child: BackdropFilter(
+  //       filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+  //       child: Container(
+  //         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+  //         decoration: BoxDecoration(
+  //           color: Colors.black.withOpacity(0.3),
+  //           borderRadius: BorderRadius.circular(30),
+  //           border: Border.all(color: Colors.white12),
+  //         ),
+  //         child: Row(
+  //           mainAxisSize: MainAxisSize.min,
+  //           children: [
+  //             Icon(
+  //               _isAmbiguous ? Icons.warning_amber_rounded : Icons.auto_awesome,
+  //               color: color,
+  //               size: 16,
+  //             ),
+  //             const SizedBox(width: 8),
+  //             Text(
+  //               _instructionText.toUpperCase(),
+  //               style: TextStyle(
+  //                 color: Colors.white.withOpacity(0.9),
+  //                 fontSize: 12,
+  //                 fontWeight: FontWeight.bold,
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildBottomDeck(Color activeColor) {
     return Container(
@@ -468,7 +443,7 @@ class _ScannerScreenState extends State<ScannerScreen>
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
-          colors: [Colors.black.withOpacity(1.0), Colors.transparent],
+          colors: [Colors.black.withAlpha(255), Colors.transparent],
         ),
       ),
       child: Column(
@@ -490,7 +465,7 @@ class _ScannerScreenState extends State<ScannerScreen>
                     width: 285,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.4),
+                      color: Colors.black.withAlpha(102),
                       borderRadius: BorderRadius.circular(22),
                       border: Border.all(color: Colors.white10),
                     ),
@@ -556,12 +531,12 @@ class _ScannerScreenState extends State<ScannerScreen>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.5),
+                  color: Colors.white.withAlpha(128),
                   width: 4,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: activeColor.withOpacity(0.4),
+                    color: activeColor.withAlpha(102),
                     blurRadius: 20,
                   ),
                 ],
@@ -577,7 +552,7 @@ class _ScannerScreenState extends State<ScannerScreen>
                 ),
                 child: Icon(
                   Icons.camera_alt_rounded,
-                  color: Colors.black.withOpacity(0.8),
+                  color: Colors.black.withAlpha(204),
                   size: 32,
                 ),
               ),
@@ -604,8 +579,8 @@ class _ScannerScreenState extends State<ScannerScreen>
             width: 44,
             decoration: BoxDecoration(
               color: isActive
-                  ? Colors.white.withOpacity(0.2)
-                  : Colors.black.withOpacity(0.3),
+                  ? Colors.white.withAlpha(51)
+                  : Colors.black.withAlpha(77),
               shape: BoxShape.circle,
               border: Border.all(
                 color: isActive ? Colors.white : Colors.white10,

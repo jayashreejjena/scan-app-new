@@ -1,5 +1,4 @@
 import 'package:get/get.dart';
-import 'package:odisha_air_map/pages/content/content_view.dart';
 
 import 'app_pages.dart';
 
@@ -49,5 +48,9 @@ class RouteManagement {
 
   static void goToContent() {
     Get.toNamed<void>(Routes.content);
+  }
+
+  static void goTodownloadList() {
+    Get.toNamed<void>(Routes.downloadlist);
   }
 }

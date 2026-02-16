@@ -123,8 +123,8 @@ class ScannerBeamPainter extends CustomPainter {
         begin: Alignment.bottomCenter,
         end: Alignment.topCenter,
         colors: [
-          Colors.cyanAccent.withOpacity(0.6),
-          Colors.cyanAccent.withOpacity(0.0),
+          Colors.cyanAccent.withAlpha(153),
+          Colors.cyanAccent.withAlpha(0),
         ],
       ).createShader(Rect.fromLTWH(0, yPos - 100, size.width, 100));
 

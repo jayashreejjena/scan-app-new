@@ -77,10 +77,9 @@ class ExplorecategoryController extends GetxController {
     selectedCategory.value = category;
 
     RouteManagement.goToSubCategory(
-      districtId: districtId.value, // Now dynamic & safe
+      districtId: districtId.value,
       categoryId: int.parse(category.id),
       categoryName: category.name,
     );
   }
-
 }
