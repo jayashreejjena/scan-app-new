@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -198,18 +197,13 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
                               ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(28),
-                                child: 
-                                ModelViewer(
-                                  src: Platform.isAndroid
-                                      ? 'file://$localPath'
-                                      : localPath,
+                                child: ModelViewer(
+                                  src: 'file://$localPath',
                                   autoRotate: true,
                                   cameraControls: true,
                                   backgroundColor: Colors.transparent,
                                   alt:
                                       "3D model of ${c.locationDetails.value?.name}",
-                                  loading: Loading
-                                      .eager, 
                                 ),
                                 // child: ModelViewer(
                                 //   src: 'file://$localPath',
@@ -354,28 +348,32 @@ class _ObjectDetectedScreenState extends State<ObjectDetectedScreen>
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          // Changed to Arrow Back to avoid confusion with the overlay close button
           _glassIconButton(
             icon: Icons.arrow_back_ios_new_rounded,
             onTap: () => Get.back(),
           ),
-          const Spacer(),
-          Text(
-            c.locationDetails.value?.name ?? "Object Detected",
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-          const Spacer(),
 
-          // INFO / CLOSE TOGGLE BUTTON
+          const SizedBox(width: 12),
+
+          // ✅ Give text flexible space
+          Expanded(
+            child: Text(
+              c.locationDetails.value?.name ?? "Object Detected",
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ), 
+          
+          const SizedBox(width: 12),
           _glassIconButton(
             icon: _showInstructions ? Icons.close : Icons.info_outline_rounded,
             onTap: _handleInfoButtonTap,
-            isActive: _showInstructions, // Highlights button when active
+            isActive: _showInstructions,
           ),
         ],
       ),

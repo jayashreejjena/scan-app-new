@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:odisha_air_map/navigators/navigators.dart';
-import 'package:odisha_air_map/pages/explorecategory/explorecategory_controller.dart';
+import 'package:odisha_air_map/navigators/routes_management.dart';
 import 'package:odisha_air_map/pages/subcategory/subcategory_controller.dart';
 
 class SubCategoryItemsScreen extends StatelessWidget {
@@ -12,99 +11,79 @@ class SubCategoryItemsScreen extends StatelessWidget {
     final SubcategoryController c = Get.put(SubcategoryController());
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F7),
+      backgroundColor: const Color(0xFFF8F9FB),
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
             pinned: true,
-            floating: false,
             elevation: 0,
-            backgroundColor: const Color(0xFFF2F2F7),
-            toolbarHeight: 56,
-            titleSpacing: 0,
-            leading: Padding(
-              padding: const EdgeInsets.only(left: 12),
-              child: CircleAvatar(
-                backgroundColor: Colors.white,
+            backgroundColor: const Color(0xFFF8F9FB),
+            leadingWidth: 60,
+            leading: UnconstrainedBox(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
                 child: IconButton(
+                  visualDensity: VisualDensity.compact,
                   icon: const Icon(
-                    Icons.arrow_back_rounded,
+                    Icons.arrow_back_ios_new_rounded,
+                    size: 18,
                     color: Colors.black,
                   ),
                   onPressed: () => Get.back(),
                 ),
               ),
             ),
-            title: Padding(
-              padding: const EdgeInsets.only(left: 10),
-              child: Text(
-                c.categoryName,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.black87,
-                  letterSpacing: -0.5,
-                ),
+            title: Text(
+              c.categoryName,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF1A1A1A),
+                letterSpacing: -0.8,
               ),
             ),
           ),
           Obx(() {
             if (c.isLoading.value) {
               return const SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(
+                  child: CircularProgressIndicator(color: Colors.black),
+                ),
               );
             }
             if (c.errorMessage.value != null) {
               return SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(
-                  child: Text(
-                    c.errorMessage.value!,
-                    style: const TextStyle(color: Colors.red),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+                child: Center(child: Text(c.errorMessage.value!)),
               );
             }
             if (c.items.isEmpty) {
-              return SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.map_outlined,
-                        size: 80,
-                        color: Colors.grey[300],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        "No spots found here yet.",
-                        style: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              return const SliverFillRemaining(
+                child: Center(child: Text("No spots found here yet.")),
               );
             }
 
             return SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate((context, index) {
-                  final item = c.items[index];
                   return _CinematicItemCard(
-                    item: item,
+                    item: c.items[index],
                     index: index,
                     onTap: () {
-                      RouteManagement.goToObjectDetected(int.parse(item.id));
+                      RouteManagement.goToObjectDetected(
+                        int.parse(c.items[index].id),
+                      );
                     },
                   );
                 }, childCount: c.items.length),
@@ -118,7 +97,7 @@ class SubCategoryItemsScreen extends StatelessWidget {
 }
 
 class _CinematicItemCard extends StatelessWidget {
-  final ExploreItem item;
+  final dynamic item; // Replace with ExploreItem
   final int index;
   final VoidCallback onTap;
 
@@ -130,23 +109,21 @@ class _CinematicItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool hasImage = item.imageUrl.isNotEmpty;
-
     return Container(
-      height: 240,
-      margin: const EdgeInsets.only(bottom: 20),
+      height: 280, // Increased height for better visual impact
+      margin: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(20),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(32),
         child: Material(
           color: Colors.white,
           child: InkWell(
@@ -154,93 +131,83 @@ class _CinematicItemCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                if (hasImage)
-                  Hero(
-                    tag: "img_${item.id}",
+                // 1. Background Image with Zoom Effect
+                Hero(
+                  tag: "img_${item.id}",
+                  child: ShaderMask(
+                    shaderCallback: (rect) {
+                      return LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.1),
+                          Colors.black.withOpacity(0.0),
+                          Colors.black.withOpacity(0.8),
+                        ],
+                        stops: const [0.0, 0.4, 1.0],
+                      ).createShader(rect);
+                    },
+                    blendMode: BlendMode.darken,
                     child: Image.network(
                       item.imageUrl,
-                      fit: BoxFit.fill,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) {
-                          return child;
-                        }
-
-                        return Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            _StylishPlaceholder(index: index),
-                            Center(
-                              child: CircularProgressIndicator(
-                                value:
-                                    loadingProgress.expectedTotalBytes != null
-                                    ? loadingProgress.cumulativeBytesLoaded /
-                                          loadingProgress.expectedTotalBytes!
-                                    : null,
-                                color: Colors.black,
-                                strokeWidth: 2.5,
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                      errorBuilder: (_, _, _) =>
+                      fit: BoxFit.cover, // Cover is more professional than fill
+                      errorBuilder: (context, error, stackTrace) =>
                           _StylishPlaceholder(index: index),
                     ),
-                  )
-                else
-                  _StylishPlaceholder(index: index),
+                  ),
+                ),
                 Positioned(
                   bottom: 0,
                   left: 0,
                   right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(20, 40, 20, 20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withAlpha(179),
-                          Colors.black.withAlpha(230),
-                        ],
-                        stops: const [0.0, 0.6, 1.0],
-                      ),
-                    ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // Title
                         Text(
                           item.name,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
                             letterSpacing: -0.5,
+                            height: 1.1,
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 12),
+
+                        // Action Bar
                         Row(
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
+                                horizontal: 14,
+                                vertical: 8,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white.withAlpha(51),
-                                borderRadius: BorderRadius.circular(8),
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const Text(
-                                "Tap to view",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                              child: const Row(
+                                children: [
+                                  Text(
+                                    "View Details",
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(width: 6),
+                                  Icon(
+                                    Icons.arrow_forward_rounded,
+                                    size: 14,
+                                    color: Colors.black,
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -260,63 +227,32 @@ class _CinematicItemCard extends StatelessWidget {
 
 class _StylishPlaceholder extends StatelessWidget {
   final int index;
-
   const _StylishPlaceholder({required this.index});
 
   @override
   Widget build(BuildContext context) {
     final palettes = [
-      [const Color(0xFF2E3192), const Color(0xFF1BFFFF)],
-      [const Color(0xFFFF512F), const Color(0xFFDD2476)],
-      [const Color(0xFF11998e), const Color(0xFF38ef7d)],
-      [const Color(0xFF8E2DE2), const Color(0xFF4A00E0)],
-      [const Color(0xFF0f2027), const Color(0xFF2c5364)],
+      [const Color(0xFF1e3c72), const Color(0xFF2a5298)],
+      [const Color(0xFFe94057), const Color(0xFFf27121)],
+      [const Color(0xFF0ba360), const Color(0xFF3cba92)],
     ];
-
     final colors = palettes[index % palettes.length];
 
-    return Stack(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: colors,
-            ),
-          ),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        Positioned(
-          right: -40,
-          top: -40,
-          child: Opacity(
-            opacity: 0.15,
-            child: Icon(
-              index % 2 == 0 ? Icons.location_on_rounded : Icons.map_rounded,
-              size: 200,
-              color: Colors.white,
-            ),
-          ),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.image_not_supported_outlined,
+          color: Colors.white54,
+          size: 40,
         ),
-        Center(
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withAlpha(38),
-              border: Border.all(
-                color: Colors.white.withAlpha(77),
-                width: 1,
-              ),
-            ),
-            child: const Icon(
-              Icons.landscape_rounded,
-              color: Colors.white,
-              size: 40,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

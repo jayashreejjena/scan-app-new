@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -77,8 +78,20 @@ class _ScannerScreenState extends State<ScannerScreen>
   Future<void> _handleScan() async {
     if (c.isLoading.value) return;
 
+    final size = MediaQuery.of(context).size;
+    final scanWindowSize = size.width * 0.75;
+
+    // Define the exact Rect you used for the UI
+    final cutoutRect = Rect.fromCenter(
+      center: Offset(size.width / 2, size.height / 2 - 120),
+      width: scanWindowSize,
+      height: scanWindowSize,
+    );
+
     HapticFeedback.heavyImpact();
-    await c.scanImage();
+
+    // Pass these to the controller
+    await c.scanImage(cutoutRect: cutoutRect, screenSize: size);
   }
 
   @override
@@ -100,8 +113,8 @@ class _ScannerScreenState extends State<ScannerScreen>
     );
 
     final Color activeColor = _isAmbiguous
-        ? const Color(0xFFFF5252) 
-        : const Color(0xFF64FFDA); 
+        ? const Color(0xFFFF5252)
+        : const Color(0xFF64FFDA);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -345,7 +358,7 @@ class _ScannerScreenState extends State<ScannerScreen>
 
   Widget _buildSoftOverlay(Rect cutoutRect) {
     return ColorFiltered(
-      colorFilter: const ColorFilter.mode(Colors.black54, BlendMode.srcOut),
+      colorFilter: const ColorFilter.mode(Colors.black87, BlendMode.srcOut),
       child: Stack(
         children: [
           Container(
@@ -535,10 +548,7 @@ class _ScannerScreenState extends State<ScannerScreen>
                   width: 4,
                 ),
                 boxShadow: [
-                  BoxShadow(
-                    color: activeColor.withAlpha(102),
-                    blurRadius: 20,
-                  ),
+                  BoxShadow(color: activeColor.withAlpha(102), blurRadius: 20),
                 ],
               ),
               child: Container(

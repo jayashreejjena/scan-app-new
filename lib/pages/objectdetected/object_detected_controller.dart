@@ -106,11 +106,9 @@ class ObjectDetectedController extends GetxController {
     }
   }
 
-  // 2. UPDATED: Modified to support progress tracking using HttpClient
   Future<void> _downloadAndCacheModel(String onlineUrl) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
-      // Use a unique name based on locationId to prevent loading the wrong model
       String fileName = "model_${locationId}.glb";
       final file = File('${directory.path}/$fileName');
 
@@ -123,10 +121,9 @@ class ObjectDetectedController extends GetxController {
       isModelDownloading.value = true;
       downloadProgress.value = 0.0;
 
-      // IMPORTANT: SharePoint links often need "download=1" or specific handling
       final client = http.Client();
       final request = http.Request('GET', Uri.parse(onlineUrl))
-        ..followRedirects = true; // Crucial for SharePoint
+        ..followRedirects = true;
 
       final response = await client.send(request);
 
@@ -142,8 +139,6 @@ class ObjectDetectedController extends GetxController {
             downloadProgress.value = receivedBytes / totalBytes;
           }
         }
-
-        // Verify if we actually got a GLB or just HTML text
         String startOfFile = String.fromCharCodes(bytes.take(10));
         if (startOfFile.contains("<!DOCT") || startOfFile.contains("<html")) {
           log(

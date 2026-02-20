@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:odisha_air_map/pages/explorecategory/explorecategory_controller.dart';
@@ -11,30 +10,33 @@ class ExploreCategoriesScreen extends StatelessWidget {
     final ExplorecategoryController c = Get.put(ExplorecategoryController());
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FC),
+      backgroundColor: const Color(0xFFFBFBFE),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF8F9FC),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(
-          onPressed: () => Get.back(),
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(13),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.arrow_back_rounded,
-              color: Color(0xFF2D3436),
-              size: 20,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16.0),
+          child: IconButton(
+            onPressed: () => Get.back(),
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.chevron_left_rounded,
+                color: Color(0xFF1A1C1E),
+                size: 24,
+              ),
             ),
           ),
         ),
@@ -43,23 +45,22 @@ class ExploreCategoriesScreen extends StatelessWidget {
         builder: (context, constraints) {
           final width = constraints.maxWidth;
 
-          // Responsive Logic
           int crossAxisCount = 2;
-          double childAspectRatio = 0.95;
+          double childAspectRatio = 0.85;
           double horizontalPadding = 24.0;
 
           if (width >= 1200) {
             crossAxisCount = 5;
-            childAspectRatio = 1.1;
-            horizontalPadding = 100.0;
+            childAspectRatio = 0.95;
+            horizontalPadding = 80.0;
           } else if (width >= 900) {
             crossAxisCount = 4;
-            childAspectRatio = 1.0;
-            horizontalPadding = 60.0;
+            childAspectRatio = 0.9;
+            horizontalPadding = 40.0;
           } else if (width >= 600) {
             crossAxisCount = 3;
-            childAspectRatio = 0.95;
-            horizontalPadding = 40.0;
+            childAspectRatio = 0.88;
+            horizontalPadding = 32.0;
           }
 
           return SingleChildScrollView(
@@ -71,93 +72,77 @@ class ExploreCategoriesScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 10),
-                    // --- Header Section ---
-                    const Text(
-                      "Discover",
+                    const SizedBox(height: 8),
+                    Text(
+                      "EXPLORE",
                       style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 1,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.blueGrey.withOpacity(0.6),
+                        letterSpacing: 2,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     const Text(
-                      "Categories",
+                      "Our Categories",
                       style: TextStyle(
-                        fontSize: 32,
+                        fontSize: 34,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF263238),
-                        height: 1.1,
+                        color: Color(0xFF101828),
+                        letterSpacing: -0.5,
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // --- Location Pill ---
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha(13),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.location_on,
-                            color: Color(0xFFFF6B6B),
-                            size: 16,
-                          ),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Obx(
-                              () => Text(
-                                c.districtName.value,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: Color(0xFF2D3436),
-                                ),
+                    // --- Location Indicator ---
+                    Obx(
+                      () => Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF2F4F7),
+                          borderRadius: BorderRadius.circular(100),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.near_me_rounded,
+                              color: Color(0xFF667085),
+                              size: 14,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              c.districtName.value,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                                color: Color(0xFF344054),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-
-                    const SizedBox(height: 30),
-
-                    // --- Grid Content ---
+                    const SizedBox(height: 32),
+                    // --- Grid ---
                     Obx(
                       () => GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        padding: const EdgeInsets.only(bottom: 40),
+                        padding: const EdgeInsets.only(bottom: 60),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount,
-                          crossAxisSpacing: 24,
-                          mainAxisSpacing: 24,
+                          crossAxisSpacing: 20,
+                          mainAxisSpacing: 20,
                           childAspectRatio: childAspectRatio,
                         ),
                         itemCount: c.categories.length,
                         itemBuilder: (context, index) {
                           final cat = c.categories[index];
                           final palette = _palettes[index % _palettes.length];
-
-                          return _DesignerCategoryCard(
+                          return _ClassyCategoryCard(
                             category: cat,
                             palette: palette,
                             onTap: () => c.openCategoryItems(cat),
@@ -176,12 +161,12 @@ class ExploreCategoriesScreen extends StatelessWidget {
   }
 }
 
-class _DesignerCategoryCard extends StatelessWidget {
+class _ClassyCategoryCard extends StatelessWidget {
   final dynamic category;
   final _CategoryPalette palette;
   final VoidCallback onTap;
 
-  const _DesignerCategoryCard({
+  const _ClassyCategoryCard({
     required this.category,
     required this.palette,
     required this.onTap,
@@ -189,93 +174,112 @@ class _DesignerCategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: palette.background,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: palette.accent.withAlpha(26),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF101828).withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(32),
           child: Stack(
             children: [
-              Positioned(
-                right: -20,
-                top: -20,
-                child: Transform.rotate(
-                  angle: -pi / 6,
-                  child: Icon(
-                    category.icon,
-                    size: 100,
-                    color: palette.accent.withAlpha(38),
+              // Subtle background gradient for "depth"
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(32),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        palette.accent.withOpacity(0.08),
+                        Colors.white.withOpacity(0),
+                      ],
+                    ),
                   ),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(18.0),
+                padding: const EdgeInsets.all(22.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
+                    // Icon Container
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      height: 52,
+                      width: 52,
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
+                        color: palette.accent,
+                        borderRadius: BorderRadius.circular(18),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withAlpha(13),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
+                            color: palette.accent.withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
                           ),
                         ],
                       ),
-                      child: Icon(
-                        category.icon,
-                        color: palette.accent,
-                        size: 20,
-                      ),
+                      child: Icon(category.icon, color: Colors.white, size: 26),
                     ),
                     const Spacer(),
+                    // Category Name
                     Text(
                       category.name,
-                      style: TextStyle(
-                        fontSize: 16,
+                      style: const TextStyle(
+                        fontSize: 18,
                         fontWeight: FontWeight.w800,
-                        color: Colors.blueGrey[900],
+                        color: Color(0xFF101828),
                         height: 1.2,
+                        letterSpacing: -0.4,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 12),
+                    // Professional Link
                     Row(
                       children: [
                         Text(
                           "Explore",
                           style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.blueGrey[600],
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: palette.accent,
+                            letterSpacing: 0.5,
                           ),
                         ),
                         const SizedBox(width: 4),
                         Icon(
                           Icons.arrow_forward_rounded,
-                          size: 12,
+                          size: 14,
                           color: palette.accent,
                         ),
                       ],
                     ),
                   ],
+                ),
+              ),
+              // Artistic large faded icon background
+              Positioned(
+                bottom: -20,
+                right: -15,
+                child: Transform.rotate(
+                  angle: -0.2,
+                  child: Icon(
+                    category.icon,
+                    size: 100,
+                    color: palette.accent.withOpacity(0.04),
+                  ),
                 ),
               ),
             ],
@@ -294,10 +298,10 @@ class _CategoryPalette {
 }
 
 final List<_CategoryPalette> _palettes = [
-  const _CategoryPalette(Color(0xFFE3F2FD), Color(0xFF2196F3)),
-  const _CategoryPalette(Color(0xFFFBE9E7), Color(0xFFFF7043)),
-  const _CategoryPalette(Color(0xFFF3E5F5), Color(0xFFAB47BC)),
-  const _CategoryPalette(Color(0xFFE0F2F1), Color(0xFF26A69A)),
-  const _CategoryPalette(Color(0xFFFFF3E0), Color(0xFFFFA726)),
-  const _CategoryPalette(Color(0xFFFFEBEE), Color(0xFFEF5350)),
+  const _CategoryPalette(Color(0xFFEFF6FF), Color(0xFF2563EB)), // Classic Blue
+  const _CategoryPalette(Color(0xFFFFF1F2), Color(0xFFE11D48)), // Rose
+  const _CategoryPalette(Color(0xFFF5F3FF), Color(0xFF7C3AED)), // Violet
+  const _CategoryPalette(Color(0xFFECFDF5), Color(0xFF059669)), // Emerald
+  const _CategoryPalette(Color(0xFFFFF7ED), Color(0xFFEA580C)), // Orange
+  const _CategoryPalette(Color(0xFFF0FDFA), Color(0xFF0D9488)), // Teal
 ];

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
+import 'dart:math' as Math;
 
 import 'package:camera/camera.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -13,6 +14,14 @@ import 'package:image/image.dart' as img;
 import 'package:odisha_air_map/navigators/routes_management.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+
+class CropParameters {
+  final Uint8List bytes;
+  final Rect cutoutRect;
+  final Size screenSize;
+
+  CropParameters(this.bytes, this.cutoutRect, this.screenSize);
+}
 
 class ScannerController extends GetxController {
   final cameraController = Rxn<CameraController>();
@@ -90,7 +99,10 @@ class ScannerController extends GetxController {
     log("🚫 Scan Cancelled by User");
   }
 
-  Future<void> scanImage() async {
+  Future<void> scanImage({
+    required Rect cutoutRect,
+    required Size screenSize,
+  }) async {
     if (!isInternetConnected.value) return;
 
     final controller = cameraController.value;
@@ -114,7 +126,7 @@ class ScannerController extends GetxController {
       final Uint8List rawBytes = await file.readAsBytes();
       final Uint8List processedBytes = await compute(
         processImageInIsolate,
-        rawBytes,
+        CropParameters(rawBytes, cutoutRect, screenSize),
       );
 
       if (!isLoading.value) {
@@ -172,22 +184,54 @@ class ScannerController extends GetxController {
     );
   }
 
-  static Uint8List processImageInIsolate(Uint8List inputBytes) {
-    img.Image? original = img.decodeImage(inputBytes);
-    if (original == null) return inputBytes;
+  static Uint8List processImageInIsolate(CropParameters params) {
+    img.Image? fullImage = img.decodeImage(params.bytes);
+    if (fullImage == null) return params.bytes;
 
-    final int size = original.width < original.height
-        ? original.width
-        : original.height;
-    img.Image cropped = img.copyCrop(
-      original,
-      x: (original.width - size) ~/ 2,
-      y: (original.height - size) ~/ 2,
-      width: size,
-      height: size,
+    // IMPORTANT: Camera images are often rotated.
+    // If the image width < height, it's portrait. Otherwise, adjust.
+    if (fullImage.width > fullImage.height) {
+      fullImage = img.copyRotate(fullImage, angle: 90);
+    }
+
+    double imageWidth = fullImage.width.toDouble();
+    double imageHeight = fullImage.height.toDouble();
+
+    double screenWidth = params.screenSize.width;
+    double screenHeight = params.screenSize.height;
+
+    // Calculate the scale used by BoxFit.cover
+    double scale = Math.max(
+      screenWidth / imageWidth,
+      screenHeight / imageHeight,
     );
+
+    // Calculate how much of the image is visible on screen
+    double visibleWidth = screenWidth / scale;
+    double visibleHeight = screenHeight / scale;
+
+    // Calculate the offset (centering the image)
+    double offsetX = (imageWidth - visibleWidth) / 2;
+    double offsetY = (imageHeight - visibleHeight) / 2;
+
+    // Map the UI Cutout Rect to Image Pixels
+    int cropX = (offsetX + (params.cutoutRect.left / scale)).toInt();
+    int cropY = (offsetY + (params.cutoutRect.top / scale)).toInt();
+    int cropW = (params.cutoutRect.width / scale).toInt();
+    int cropH = (params.cutoutRect.height / scale).toInt();
+
+    // Perform the crop
+    img.Image cropped = img.copyCrop(
+      fullImage,
+      x: cropX,
+      y: cropY,
+      width: cropW,
+      height: cropH,
+    );
+
+    // Resize for API efficiency
     img.Image resized = img.copyResize(cropped, width: 800, height: 800);
-    return Uint8List.fromList(img.encodeJpg(resized, quality: 85));
+    return Uint8List.fromList(img.encodeJpg(resized, quality: 90));
   }
 
   Future<File> saveToDisk(Uint8List imageBytes) async {
@@ -232,4 +276,3 @@ class ScannerController extends GetxController {
     super.onClose();
   }
 }
- 
